@@ -3,7 +3,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "xarray_regrid"
+name = "xarray-regrid"
 dynamic = ["version"]
 description = 'Regridding tools using xarray and flox.'
 readme = "README.md"
@@ -28,10 +28,15 @@ dependencies = [
   "scipy",
 ]
 
+[tool.hatch.build]
+exclude = [
+  "benchmarks/data"
+]
+
 [project.urls]
-Documentation = "https://github.com/EXCITED-CO2/xarray_regrid#readme"
-Issues = "https://github.com/EXCITED-CO2/xarray_regrid/issues"
-Source = "https://github.com/EXCITED-CO2/xarray_regrid"
+Documentation = "https://github.com/EXCITED-CO2/xarray-regrid#readme"
+Issues = "https://github.com/EXCITED-CO2/xarray-regrid/issues"
+Source = "https://github.com/EXCITED-CO2/xarray-regrid"
 
 [project.optional-dependencies]
 benchmarking = [
