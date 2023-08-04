@@ -1,0 +1,157 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "xarray_regrid"
+dynamic = ["version"]
+description = 'Regridding tools using xarray and flox.'
+readme = "README.md"
+requires-python = ">=3.10"
+license = "Apache-2.0"
+keywords = []
+authors = [
+  { name = "Bart Schilperoort", email = "b.schilperoort@esciencecenter.nl" },
+]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Programming Language :: Python",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: Implementation :: CPython",
+  "Programming Language :: Python :: Implementation :: PyPy",
+]
+dependencies = [
+  "numpy",
+  "xarray",
+  "flox",
+  "scipy",
+]
+
+[project.urls]
+Documentation = "https://github.com/EXCITED-CO2/xarray_regrid#readme"
+Issues = "https://github.com/EXCITED-CO2/xarray_regrid/issues"
+Source = "https://github.com/EXCITED-CO2/xarray_regrid"
+
+[project.optional-dependencies]
+benchmarking = [
+  "dask[distributed]",
+  "matplotlib",
+]
+dev = [
+  "bump2version",
+  "hatch",
+  "ruff",
+  "black[jupyter]",
+  "mypy",
+  "pytest",
+  "pytest-cov",
+]
+
+[tool.hatch.version]
+path = "src/xarray_regrid/__about__.py"
+
+[tool.hatch.envs.default]
+features = ["dev", "benchmarking"]
+
+[tool.hatch.envs.default.scripts]
+lint = [
+  "ruff check .",
+  "mypy src",
+  "black --check --diff .",
+]
+format = ["black .", "lint",]
+test = ["pytest ./src/ ./tests/ --doctest-modules",]
+coverage = [
+  "pytest --cov --cov-report term --cov-report xml --junitxml=xunit-result.xml tests/",
+]
+
+[tool.black]
+target-version = ["py310"]
+line-length = 88
+skip-string-normalization = true
+
+[tool.ruff]
+target-version = "py310"
+line-length = 88
+select = [
+  "A",
+  "ARG",
+  "B",
+  "C",
+  "DTZ",
+  "E",
+  "EM",
+  "F",
+  "FBT",
+  "I",
+  "ICN",
+  "ISC",
+  "N",
+  "PLC",
+  "PLE",
+  "PLR",
+  "PLW",
+  "Q",
+  "RUF",
+  "S",
+  "T",
+  "TID",
+  "UP",
+  "W",
+  "YTT",
+]
+ignore = [
+  # Allow non-abstract empty methods in abstract base classes
+  "B027",
+  # Allow boolean positional values in function calls, like `dict.get(... True)`
+  "FBT003",
+  # Ignore checks for possible passwords
+  "S105", "S106", "S107",
+  # Ignore complexity
+  "C901", "PLR0911", "PLR0912", "PLR0913", "PLR0915",
+]
+unfixable = [
+  # Don't touch unused imports
+  "F401",
+]
+
+[tool.ruff.isort]
+known-first-party = ["xarray_regrid"]
+
+[tool.ruff.flake8-tidy-imports]
+ban-relative-imports = "all"
+
+[tool.ruff.per-file-ignores]
+# Tests can use magic values, assertions, and relative imports
+"tests/**/*" = ["PLR2004", "S101", "TID252"]
+
+[tool.coverage.run]
+source_pkgs = ["xarray_regrid", "tests"]
+branch = true
+parallel = true
+omit = [
+  "src/xarray_regrid/__about__.py",
+]
+
+[tool.coverage.paths]
+xarray_regrid = ["xarray_regrid", "*/xarray_regrid/xarray_regrid"]
+tests = ["tests", "*/xarray_regrid/tests"]
+
+[tool.coverage.report]
+exclude_lines = [
+  "no cov",
+  "if __name__ == .__main__.:",
+  "if TYPE_CHECKING:",
+]
+
+[tool.mypy]
+python_version = "3.10"
+plugins = "numpy.typing.mypy_plugin"
+disallow_untyped_defs = true
+disallow_any_unimported = true
+no_implicit_optional = true
+check_untyped_defs = true
+warn_return_any = true
+warn_unused_ignores = true
+show_error_codes = true

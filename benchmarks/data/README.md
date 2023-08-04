@@ -1,0 +1,1 @@
+Data used here is generated using Copernicus Climate Change Service information and for more information about licensing, please check the Licence Agreement (https://cds.climate.copernicus.eu/cdsapp/#!/terms/licence-to-use-copernicus-products) for Copernicus Products.

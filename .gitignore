@@ -1,0 +1,34 @@
+*.py[cod]
+*.egg-info
+*.eggs
+.ipynb_checkpoints
+.mypy_cache
+.ruff_cache
+.venv
+
+build
+dist
+.cache
+__pycache__
+
+htmlcov
+.coverage
+coverage.xml
+.pytest_cache
+.tox
+
+docs/_build
+
+# ide
+.idea
+.eclipse
+.vscode
+
+# Mac
+.DS_Store
+
+# virtual environments
+env
+env3
+venv
+venv3
