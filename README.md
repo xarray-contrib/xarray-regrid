@@ -32,5 +32,9 @@ To be able to run the notebooks, a conda environment is required (due to ESMF an
 You can install this environment using the `environment.yml` file in this repository.
 [Micromamba](https://mamba.readthedocs.io/en/latest/user_guide/micromamba.html) is a lightweight version of the much faster "mamba" conda alternative.
 
+```sh
+micromamba create -n environment_name -f environment.yml
+```
+
 ## Planned features
 - Support conservative regridding

@@ -1,0 +1,10 @@
+---
+name: xarray-regrid
+channels:
+  - conda-forge
+dependencies:
+  - python==3.10
+  - xESMF
+  - cdo
+  - pip:
+      - "xarray-regrid"
