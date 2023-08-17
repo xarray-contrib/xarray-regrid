@@ -1,4 +1,4 @@
-name: Python package
+name: Linting
 
 on:
   push:
@@ -28,4 +28,4 @@ jobs:
     - name: Upgrade pip and install hatch
       run: python3 -m pip install --upgrade pip hatch
     - name: Check style against standards
-      run: hatch run 
+      run: hatch run lint
