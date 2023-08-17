@@ -12,9 +12,11 @@ CDO_DATA = {
     "nearest": DATA_PATH / "cdo_nearest_64b.nc",
 }
 
+
 @pytest.fixture
 def sample_input_data() -> xr.Dataset:
     return xr.open_dataset(DATA_PATH / "era5_2m_dewpoint_temperature_2000_monthly.nc")
+
 
 @pytest.fixture
 def sample_grid_ds():
@@ -29,11 +31,14 @@ def sample_grid_ds():
 
     return xarray_regrid.create_regridding_dataset(grid)
 
+
 @pytest.mark.parametrize(
-    "method, cdo_file", [
+    "method, cdo_file",
+    [
         ("linear", CDO_DATA["linear"]),
         ("nearest", CDO_DATA["nearest"]),
-    ])
+    ],
+)
 def test_regridder(sample_input_data, sample_grid_ds, method, cdo_file):
     ds_regrid = sample_input_data.regrid.regrid(sample_grid_ds, method=method)
     ds_cdo = xr.open_dataset(cdo_file)
