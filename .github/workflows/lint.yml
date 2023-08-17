@@ -1,0 +1,31 @@
+name: Python package
+
+on:
+  push:
+    branches:
+    - main
+  pull_request:
+    branches:
+    - main
+
+jobs:
+  lint:
+    name: Linting build
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+    steps:
+    - uses: actions/checkout@v3
+    - name: Set up Python 3.10
+      uses: actions/setup-python@v3
+      with:
+        python-version: "3.10"
+    - name: Python info
+      shell: bash -l {0}
+      run: |
+        which python3
+        python3 --version
+    - name: Upgrade pip and install hatch
+      run: python3 -m pip install --upgrade pip hatch
+    - name: Check style against standards
+      run: hatch run 
