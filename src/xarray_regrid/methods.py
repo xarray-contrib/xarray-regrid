@@ -3,7 +3,7 @@ from typing import Literal
 import xarray as xr
 
 
-def _interp_regrid(
+def interp_regrid(
     data: xr.Dataset,
     target_ds: xr.Dataset,
     method: Literal["linear", "nearest", "cubic"],
@@ -18,58 +18,10 @@ def _interp_regrid(
     Returns:
         Regridded input dataset
     """
-    coord_names = list(target_ds.coords)
+    coord_names = set(target_ds.coords).intersection(set(data.coords))
     coords = {name: target_ds[name] for name in coord_names}
 
     return data.interp(
         coords=coords,
         method=method,
     )
-
-
-def linear_regrid(
-    data: xr.Dataset,
-    target_ds: xr.Dataset,
-) -> xr.Dataset:
-    """Refine a dataset using linear interpolation.
-
-    Args:
-        data: Input dataset.
-        target_ds: Dataset which coordinates the input dataset should be regrid to.
-
-    Returns:
-        Regridded input dataset
-    """
-    return _interp_regrid(data=data, target_ds=target_ds, method="linear")
-
-
-def nearest_neigbour_regrid(
-    data: xr.Dataset,
-    target_ds: xr.Dataset,
-) -> xr.Dataset:
-    """Refine a dataset using 2d nearest neighbor interpolation.
-
-    Args:
-        data: Input dataset.
-        target_ds: Dataset which coordinates the input dataset should be regrid to.
-
-    Returns:
-        Regridded input dataset
-    """
-    return _interp_regrid(data=data, target_ds=target_ds, method="nearest")
-
-
-def cubic_regrid(
-    data: xr.Dataset,
-    target_ds: xr.Dataset,
-) -> xr.Dataset:
-    """Refine a dataset using cubic interpolation.
-
-    Args:
-        data: Input dataset.
-        target_ds: Dataset which coordinates the input dataset should be regrid to.
-
-    Returns:
-        Regridded input dataset
-    """
-    return _interp_regrid(data=data, target_ds=target_ds, method="cubic")

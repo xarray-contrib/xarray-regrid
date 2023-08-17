@@ -16,10 +16,11 @@ class Regridder:
     def __init__(self, xarray_obj: xr.Dataset):
         self._obj = xarray_obj
 
-    def to_dataset(
+    def regrid(
         self,
         ds_target_grid: xr.Dataset,
         method: Literal["linear", "nearest", "cubic"],
+        time_dim: str = "time",
     ) -> xr.Dataset:
         """Return a dataset regridded to the coordinates of the target dataset.
 
@@ -30,6 +31,7 @@ class Regridder:
                     interpolation.
                 - "nearest" for nearest-neighbor regridding.
                 - "cubic" for cubic spline regridding.
+            time_dim: The name of the time dimension/coordinate
         Returns:
             Dataset regridded to the target dataset coordinates.
         """
@@ -37,22 +39,22 @@ class Regridder:
             msg = f"Unknown method '{method}'"
             raise ValueError(msg)
 
-        # Remove time dim/coord from target grid.
-        if "time" in ds_target_grid.coords:
-            ds_target_grid = ds_target_grid.isel(time=0)
+        # Remove time dim + coordinates from target grid.
+        if time_dim in ds_target_grid.coords:
+            ds_target_grid = ds_target_grid.isel(time=0).reset_coords()
 
-        if not set(ds_target_grid.dims).issubset(set(self._obj.dims)):
+        if len(set(self._obj.dims).intersection(set(ds_target_grid.dims))) == 0:
             msg = (
-                "Not all dims in the target dataset are in the \n"
+                "None of the dims in the target dataset are in the \n"
                 "dataset: regridding is not possible.\n"
                 f"Target dims: {list(ds_target_grid.dims)}"
                 f"Dataset dims: {list(self._obj.dims)}"
             )
             raise ValueError(msg)
 
-        if not set(ds_target_grid.coords).issubset(set(self._obj.coords)):
+        if len(set(self._obj.coords).intersection(set(ds_target_grid.coords))) == 0:
             msg = (
-                "Not all coords in the target dataset are in the \n"
+                "None of the coords in the target dataset are in the \n"
                 "dataset: regridding is not possible.\n"
                 f"Target coords: {ds_target_grid.coords}"
                 f"Dataset coords: {self._obj.coords}"
@@ -60,8 +62,8 @@ class Regridder:
             raise ValueError(msg)
 
         if method == "linear":
-            return methods.linear_regrid(self._obj, ds_target_grid)
+            return methods.interp_regrid(self._obj, ds_target_grid, "linear")
         elif method == "nearest":
-            return methods.nearest_neigbour_regrid(self._obj, ds_target_grid)
+            return methods.interp_regrid(self._obj, ds_target_grid, "nearest")
         if method == "cubic":
-            return methods.cubic_regrid(self._obj, ds_target_grid)
+            return methods.interp_regrid(self._obj, ds_target_grid, "cubic")
