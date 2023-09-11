@@ -31,11 +31,12 @@ class Regridder:
                     interpolation.
                 - "nearest" for nearest-neighbor regridding.
                 - "cubic" for cubic spline regridding.
+                - "conservative" for conservative regridding.
             time_dim: The name of the time dimension/coordinate
         Returns:
             Dataset regridded to the target dataset coordinates.
         """
-        if method not in ["linear", "nearest", "cubic"]:
+        if method not in ["linear", "nearest", "cubic", "conservative"]:
             msg = f"Unknown method '{method}'"
             raise ValueError(msg)
 
@@ -67,3 +68,5 @@ class Regridder:
             return methods.interp_regrid(self._obj, ds_target_grid, "nearest")
         if method == "cubic":
             return methods.interp_regrid(self._obj, ds_target_grid, "cubic")
+        if method == "conservative":
+            return methods.conservative_regrid(self._obj, ds_target_grid)

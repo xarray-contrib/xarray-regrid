@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 
 import numpy as np
+import pandas as pd
 import xarray as xr
 
 
@@ -85,4 +86,50 @@ def create_regridding_dataset(
             lat_name: ([lat_name], lat_coords, {"units": "degrees_north"}),
             lon_name: ([lon_name], lon_coords, {"units": "degrees_east"}),
         }
+    )
+
+
+def to_intervalindex(coords: np.ndarray, resolution: float) -> pd.IntervalIndex:
+    """Convert a list of (regularly spaced) 1-d coordinates to pandas IntervalIndex.
+
+    Args:
+        coords: 1-d array containing the coordinate values.
+        resolution: spatial resolution of the coordinates.
+
+    Returns:
+        A pandas IntervalIndex containing the intervals corresponding to the input
+            coordinates.
+    """
+    return pd.IntervalIndex(
+        [
+            pd.Interval(left=coord - resolution/2, right=coord + resolution/2)
+            for coord in coords
+        ]
+    )
+
+
+def overlaps(a: pd.Interval, b: pd.Interval):
+    """Return the overlap (fraction) between two Pandas intervals."""
+    return max(
+        min(a.right, b.right) - max(a.left, b.left),
+        0
+    )
+
+
+def normalize_overlap(overlap: np.ndarray) -> np.ndarray:
+    """Normalize overlap values so they sum up to 1.0 along the first axis."""
+    overlap_sum = overlap.sum(axis=0)
+    overlap_sum[overlap_sum==0] = 1e-6  # Avoid dividing by 0
+    return (overlap / overlap_sum)
+
+
+def create_dot_dataarray(weights, coord, target_coords, source_coords):
+    """Create a DataArray to be used at dot product compatible with xr.dot."""
+    return xr.DataArray(
+        data=weights,
+        dims=[coord, f"target_{coord}"],
+        coords={
+            coord: source_coords,
+            f"target_{coord}": target_coords,
+        },
     )
