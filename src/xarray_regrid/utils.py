@@ -108,18 +108,35 @@ def to_intervalindex(coords: np.ndarray, resolution: float) -> pd.IntervalIndex:
     )
 
 
-def overlaps(a: pd.Interval, b: pd.Interval):
-    """Return the overlap (fraction) between two Pandas intervals."""
-    return max(
-        min(a.right, b.right) - max(a.left, b.left),
-        0
+def overlap(a: pd.IntervalIndex, b: pd.IntervalIndex) -> np.ndarray:
+    """Calculate the overlap between two sets of intervals.
+
+    Args:
+        a: Pandas IntervalIndex containing the first set of intervals.
+        b: Pandas IntervalIndex containing the second set of intervals.
+
+    Returns:
+        2D numpy array containing overlap (as a fraction) between the intervals of a
+            and b. If there is no overlap, the value will be 0.
+    """
+    # TODO: newaxis on B and transpose is MUCH faster on benchmark.
+    #  likely due to it being the bigger dimension.
+    #  size(a) > size(b) leads to better perf than size(b) > size(a)
+    mins = np.minimum(
+        a.right.to_numpy(),
+        b.right.to_numpy()[:, np.newaxis]
     )
+    maxs = np.maximum(
+        a.left.to_numpy(),
+        b.left.to_numpy()[:, np.newaxis]
+    )
+    return np.maximum(mins-maxs, 0).T
 
 
 def normalize_overlap(overlap: np.ndarray) -> np.ndarray:
     """Normalize overlap values so they sum up to 1.0 along the first axis."""
     overlap_sum = overlap.sum(axis=0)
-    overlap_sum[overlap_sum==0] = 1e-6  # Avoid dividing by 0
+    overlap_sum[overlap_sum==0] = 1e-12  # Avoid dividing by 0.
     return (overlap / overlap_sum)
 
 

@@ -1,6 +1,5 @@
 from typing import Literal
 
-import numpy as np
 import xarray as xr
 
 from xarray_regrid import utils
@@ -68,16 +67,16 @@ def conservative_regrid(
         source_intervals = utils.to_intervalindex(
             source_coords, resolution=source_coords[1]-source_coords[0]
         )
-        overlap = np.zeros((source_intervals.size, target_intervals.size), dtype=float)
-        for i, source_iv in enumerate(source_intervals):
-            for j, target_iv in enumerate(target_intervals):
-                overlap[i,j] = utils.overlaps(source_iv, target_iv)
+        overlap = utils.overlap(source_intervals, target_intervals)
         weights = utils.normalize_overlap(overlap)
 
-        dot_array = utils.create_dot_dataarray(weights, coord, target_coords, source_coords)
-
+        # TODO: Use `sparse.COO(weights)`. xr.dot does not support this. Much faster!
+        dot_array = utils.create_dot_dataarray(
+            weights, coord, target_coords, source_coords
+        )
+        # TODO: modify weights to correct for latitude.
         dataarrays = [
-            da.dot(dot_array).rename({f"target_{coord}": coord}).rename(da.name)
+            xr.dot(da, dot_array).rename({f"target_{coord}": coord}).rename(da.name)
             for da in dataarrays
         ]
     return xr.merge(dataarrays)  # TODO: add other coordinates/data variables back in.
