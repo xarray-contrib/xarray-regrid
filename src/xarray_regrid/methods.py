@@ -61,18 +61,18 @@ def conservative_regrid(
         target_coords = coords[coord].to_numpy()
         # TODO: better resolution/IntervalIndex inference
         target_intervals = utils.to_intervalindex(
-            target_coords, resolution=target_coords[1]-target_coords[0]
+            target_coords, resolution=target_coords[1] - target_coords[0]
         )
         source_coords = data[coord].to_numpy()
         source_intervals = utils.to_intervalindex(
-            source_coords, resolution=source_coords[1]-source_coords[0]
+            source_coords, resolution=source_coords[1] - source_coords[0]
         )
         overlap = utils.overlap(source_intervals, target_intervals)
         weights = utils.normalize_overlap(overlap)
 
         # TODO: Use `sparse.COO(weights)`. xr.dot does not support this. Much faster!
         dot_array = utils.create_dot_dataarray(
-            weights, coord, target_coords, source_coords
+            weights, str(coord), target_coords, source_coords
         )
         # TODO: modify weights to correct for latitude.
         dataarrays = [

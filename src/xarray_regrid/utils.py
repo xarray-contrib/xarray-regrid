@@ -102,7 +102,7 @@ def to_intervalindex(coords: np.ndarray, resolution: float) -> pd.IntervalIndex:
     """
     return pd.IntervalIndex(
         [
-            pd.Interval(left=coord - resolution/2, right=coord + resolution/2)
+            pd.Interval(left=coord - resolution / 2, right=coord + resolution / 2)
             for coord in coords
         ]
     )
@@ -122,25 +122,25 @@ def overlap(a: pd.IntervalIndex, b: pd.IntervalIndex) -> np.ndarray:
     # TODO: newaxis on B and transpose is MUCH faster on benchmark.
     #  likely due to it being the bigger dimension.
     #  size(a) > size(b) leads to better perf than size(b) > size(a)
-    mins = np.minimum(
-        a.right.to_numpy(),
-        b.right.to_numpy()[:, np.newaxis]
-    )
-    maxs = np.maximum(
-        a.left.to_numpy(),
-        b.left.to_numpy()[:, np.newaxis]
-    )
-    return np.maximum(mins-maxs, 0).T
+    mins = np.minimum(a.right.to_numpy(), b.right.to_numpy()[:, np.newaxis])
+    maxs = np.maximum(a.left.to_numpy(), b.left.to_numpy()[:, np.newaxis])
+    overlap: np.ndarray = np.maximum(mins - maxs, 0).T
+    return overlap
 
 
 def normalize_overlap(overlap: np.ndarray) -> np.ndarray:
     """Normalize overlap values so they sum up to 1.0 along the first axis."""
-    overlap_sum = overlap.sum(axis=0)
-    overlap_sum[overlap_sum==0] = 1e-12  # Avoid dividing by 0.
-    return (overlap / overlap_sum)
+    overlap_sum: np.ndarray = overlap.sum(axis=0)
+    overlap_sum[overlap_sum == 0] = 1e-12  # Avoid dividing by 0.
+    return overlap / overlap_sum  # type: ignore
 
 
-def create_dot_dataarray(weights, coord, target_coords, source_coords):
+def create_dot_dataarray(
+    weights: np.ndarray,
+    coord: str,
+    target_coords: np.ndarray,
+    source_coords: np.ndarray,
+) -> xr.DataArray:
     """Create a DataArray to be used at dot product compatible with xr.dot."""
     return xr.DataArray(
         data=weights,
