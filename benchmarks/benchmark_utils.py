@@ -2,13 +2,13 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.axes_grid1 import ImageGrid
 
 
-def plot_comparison(data_regrid, data_esmf, data_cdo, vmin, vmax):
+def plot_comparison(data_regrid, data_esmf, data_cdo, vmin, vmax, varname):
     def relative_error(a, b):
         return (a - b) / a
 
-    esmf_v_regrid = relative_error(data_esmf, data_regrid).isel(time=0)["d2m"]
-    cdo_v_regrid = relative_error(data_cdo, data_regrid).isel(time=0)["d2m"]
-    esmf_v_cdo = relative_error(data_esmf, data_cdo).isel(time=0)["d2m"]
+    esmf_v_regrid = relative_error(data_esmf, data_regrid).isel(time=0)[varname]
+    cdo_v_regrid = relative_error(data_cdo, data_regrid).isel(time=0)[varname]
+    esmf_v_cdo = relative_error(data_esmf, data_cdo).isel(time=0)[varname]
 
     # Set up figure and image
     fig = plt.figure(1, (11, 5), dpi=250)
@@ -39,8 +39,8 @@ def plot_comparison(data_regrid, data_esmf, data_cdo, vmin, vmax):
         ax.set_ylabel("")
     axes[0].set_ylabel("latitude")
 
-    axes[0].set_title("xESMF vs. xarray interp")
-    axes[1].set_title("CDO vs. xarray interp")
+    axes[0].set_title("xESMF vs. xarray-regrid")
+    axes[1].set_title("CDO vs. xarray-regrid")
     axes[2].set_title("xESMF vs. CDO")
 
     plt.show()

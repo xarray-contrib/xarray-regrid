@@ -51,6 +51,7 @@ dev = [
   "mypy",
   "pytest",
   "pytest-cov",
+  "pandas-stubs", # Adds typing for pandas.
 ]
 
 [tool.hatch.version]
