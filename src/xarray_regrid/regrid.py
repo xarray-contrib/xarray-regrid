@@ -1,10 +1,11 @@
 import xarray as xr
 
-from xarray_regrid import methods
+from xarray_regrid import methods, most_common
 
 
 @xr.register_dataarray_accessor("regrid")
-class DataArrayRegridder:
+@xr.register_dataset_accessor("regrid")
+class Regridder:
     """Regridding xarray dataarrays.
 
     Available methods:
@@ -12,24 +13,25 @@ class DataArrayRegridder:
         nearest: nearest-neighbor regridding.
         cubic: cubic spline regridding.
         conservative: conservative regridding.
+        most_common: most common value regridder
     """
 
-    def __init__(self, xarray_obj: xr.DataArray):
+    def __init__(self, xarray_obj: xr.DataArray | xr.Dataset):
         self._obj = xarray_obj
 
     def linear(
         self,
         ds_target_grid: xr.Dataset,
         time_dim: str = "time",
-    ) -> xr.DataArray:
-        """Return a dataset regridded linearily to the coords of the target dataset.
+    ) -> xr.DataArray | xr.Dataset:
+        """Regrid to the coords of the target dataset with linear interpolation.
 
         Args:
             ds_target_grid: Dataset containing the target coordinates.
             time_dim: The name of the time dimension/coordinate
 
         Returns:
-            Dataset regridded to the target dataset coordinates.
+            Data regridded to the target dataset coordinates.
         """
         ds_target_grid = validate_input(self._obj, ds_target_grid, time_dim)
         return methods.interp_regrid(self._obj, ds_target_grid, "linear")
@@ -38,15 +40,15 @@ class DataArrayRegridder:
         self,
         ds_target_grid: xr.Dataset,
         time_dim: str = "time",
-    ) -> xr.DataArray:
-        """Return a dataset regridded by taking the values of the nearest target coords.
+    ) -> xr.DataArray | xr.Dataset:
+        """Regrid to the coords of the target with nearest-neighbor interpolation.
 
         Args:
             ds_target_grid: Dataset containing the target coordinates.
             time_dim: The name of the time dimension/coordinate
 
         Returns:
-            Dataset regridded to the target dataset coordinates.
+            Data regridded to the target dataset coordinates.
         """
         ds_target_grid = validate_input(self._obj, ds_target_grid, time_dim)
         return methods.interp_regrid(self._obj, ds_target_grid, "nearest")
@@ -55,8 +57,17 @@ class DataArrayRegridder:
         self,
         ds_target_grid: xr.Dataset,
         time_dim: str = "time",
-    ) -> xr.DataArray:
+    ) -> xr.DataArray | xr.Dataset:
         ds_target_grid = validate_input(self._obj, ds_target_grid, time_dim)
+        """Regrid to the coords of the target dataset with cubic interpolation.
+
+        Args:
+            ds_target_grid: Dataset containing the target coordinates.
+            time_dim: The name of the time dimension/coordinate
+
+        Returns:
+            Data regridded to the target dataset coordinates.
+        """
         return methods.interp_regrid(self._obj, ds_target_grid, "cubic")
 
     def conservative(
@@ -64,75 +75,46 @@ class DataArrayRegridder:
         ds_target_grid: xr.Dataset,
         latitude_coord: str | None,
         time_dim: str = "time",
-    ) -> xr.DataArray:
-        ds_target_grid = validate_input(self._obj, ds_target_grid, time_dim)
-        return methods.conservative_regrid(self._obj, ds_target_grid, latitude_coord)
-
-
-@xr.register_dataset_accessor("regrid")
-class DatasetRegridder:
-    """Regridding xarray datasets.
-
-    Available methods:
-        linear: linear, bilinear, or higher dimensional linear interpolation.
-        nearest: nearest-neighbor regridding.
-        cubic: cubic spline regridding.
-        conservative: conservative regridding.
-    """
-
-    def __init__(self, xarray_obj: xr.Dataset):
-        self._obj = xarray_obj
-
-    def linear(
-        self,
-        ds_target_grid: xr.Dataset,
-        time_dim: str = "time",
-    ) -> xr.Dataset:
-        """Return a dataset regridded linearily to the coords of the target dataset.
+    ) -> xr.DataArray | xr.Dataset:
+        """Regrid to the coords of the target dataset with a conservative scheme.
 
         Args:
             ds_target_grid: Dataset containing the target coordinates.
-            time_dim: The name of the time dimension/coordinate
+            latitude_coord: Name of the latitude coord, to be used for applying the
+                spherical correction.
+            time_dim: The name of the time dimension/coordinate.
 
         Returns:
-            Dataset regridded to the target dataset coordinates.
+            Data regridded to the target dataset coordinates.
         """
-        ds_target_grid = validate_input(self._obj, ds_target_grid, time_dim)
-        return methods.interp_regrid(self._obj, ds_target_grid, "linear")
 
-    def nearest(
-        self,
-        ds_target_grid: xr.Dataset,
-        time_dim: str = "time",
-    ) -> xr.Dataset:
-        """Return a dataset regridded by taking the values of the nearest target coords.
-
-        Args:
-            ds_target_grid: Dataset containing the target coordinates.
-            time_dim: The name of the time dimension/coordinate
-
-        Returns:
-            Dataset regridded to the target dataset coordinates.
-        """
-        ds_target_grid = validate_input(self._obj, ds_target_grid, time_dim)
-        return methods.interp_regrid(self._obj, ds_target_grid, "nearest")
-
-    def cubic(
-        self,
-        ds_target_grid: xr.Dataset,
-        time_dim: str = "time",
-    ) -> xr.Dataset:
-        ds_target_grid = validate_input(self._obj, ds_target_grid, time_dim)
-        return methods.interp_regrid(self._obj, ds_target_grid, "cubic")
-
-    def conservative(
-        self,
-        ds_target_grid: xr.Dataset,
-        latitude_coord: str | None,
-        time_dim: str = "time",
-    ) -> xr.Dataset:
         ds_target_grid = validate_input(self._obj, ds_target_grid, time_dim)
         return methods.conservative_regrid(self._obj, ds_target_grid, latitude_coord)
+
+    def most_common(
+        self,
+        ds_target_grid: xr.Dataset,
+        time_dim: str = "time",
+        max_mem: int = 1e9
+    ) -> xr.DataArray | xr.Dataset:
+        """Regrid by taking the most common value within the new grid cells.
+
+        To be used for regridding data to a much coarser resolution.
+
+        Args:
+            ds_target_grid: Target grid dataset
+            time_dim: Name of the time dimension. Defaults to "time".
+            max_mem: (Approximate) maximum memory in bytes that the regridding routine
+                can use. Note that this is not the total memory consumption and does not
+                include the size of the final dataset. Defaults to 1e9 (1 GB).
+
+        Returns:
+            Regridded data.
+        """
+        ds_target_grid = validate_input(self._obj, ds_target_grid, time_dim)
+        return most_common.most_common_wrapper(
+            self._obj, ds_target_grid, time_dim, max_mem
+        )
 
 
 def validate_input(
