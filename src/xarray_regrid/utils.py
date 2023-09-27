@@ -150,3 +150,15 @@ def create_dot_dataarray(
             f"target_{coord}": target_coords,
         },
     )
+
+
+def common_coords(
+    data1: xr.DataArray | xr.Dataset,
+    data2: xr.DataArray | xr.Dataset,
+    remove_coord: str | None = None,
+) -> set[str]:
+    """Return a set of coords which two dataset/arrays have in common."""
+    coords = set(data1.coords).intersection(set(data2.coords))
+    if remove_coord in coords:
+        coords.remove(remove_coord)
+    return coords
