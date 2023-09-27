@@ -1,9 +1,13 @@
-# xarray-regrid
-Regridding utilities for xarray.
+# xarray-regrid: Regridding utilities for xarray.
 
-Note: currently only rectilinear grids are supported.
+<img align="right" width="100" alt="Logo" src="./docs/assets/logo.png">
 
-For now xarray-regrid is mostly a wrapper around `ds.interp`, however, conservative regridding is not possible with `interp`, and will need a custom solution.
+With xarray-regrid it is possible to regrid between two rectilinear grids. The following methods are supported:
+ - Linear
+ - Nearest-neighbor
+ - Conservative
+ - Cubic
+ - "Most common value"
 
 ## Installation
 
@@ -19,11 +23,10 @@ import xarray_regrid
 ds = xr.open_dataset("input_data.nc")
 ds_grid = xr.open_dataset("target_grid.nc")
 
-ds.regrid.regrid(ds_grid, method="linear")
+ds.regrid.linear(ds_grid)
 ```
-Currently implemented are the methods linear, nearest and cubic.
 
-For examples, see the benchmark notebooks.
+For examples, see the benchmark notebooks and the demo notebooks.
 
 ## Benchmarks
 The benchmark notebooks contain comparisons to more standard methods (CDO, xESMF).
@@ -35,6 +38,3 @@ You can install this environment using the `environment.yml` file in this reposi
 ```sh
 micromamba create -n environment_name -f environment.yml
 ```
-
-## Planned features
-- Support conservative regridding
