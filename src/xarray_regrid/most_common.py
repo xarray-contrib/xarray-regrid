@@ -1,11 +1,11 @@
 """Implementation of the "most common value" regridding method."""
 
 from itertools import product
-from typing import overload
+from typing import Any, overload
 
 import flox.xarray
 import numpy as np
-import numpy_groupies as npg
+import numpy_groupies as npg  # type: ignore
 import pandas as pd
 import xarray as xr
 from flox import Aggregation
@@ -78,7 +78,7 @@ def most_common_wrapper(
 
 
 def split_combine_most_common(
-    data: xr.Dataset, target_ds: xr.Dataset, time_dim: str, max_mem: int = 1e9
+    data: xr.Dataset, target_ds: xr.Dataset, time_dim: str, max_mem: int = int(1e9)
 ) -> xr.Dataset:
     """Use a split-combine strategy to reduce the memory use of the most_common regrid.
 
@@ -173,7 +173,7 @@ def most_common(data: xr.Dataset, target_ds: xr.Dataset, time_dim: str) -> xr.Da
 
     most_common = Aggregation(
         name="most_common",
-        numpy=_custom_grouped_reduction,
+        numpy=_custom_grouped_reduction,  # type: ignore
         chunk=None,
         combine=None,
     )
@@ -208,14 +208,7 @@ def _most_common_label(neighbors: np.ndarray) -> np.ndarray:
     then the first label in the list will be picked.
     """
     unique_labels, counts = np.unique(neighbors, return_counts=True)
-    return unique_labels[np.argmax(counts)]
-
-
-def most_common_chunked(multi_values: np.ndarray, multi_counts: np.ndarray):
-    all_values, index = np.unique(multi_values, return_inverse=True)
-    all_counts = np.zeros(all_values.size, np.int64)
-    np.add.at(all_counts, index, multi_counts.ravel())  # inplace
-    return all_values[all_counts.argmax()]
+    return unique_labels[np.argmax(counts)]  # type: ignore
 
 
 def _custom_grouped_reduction(
@@ -224,8 +217,8 @@ def _custom_grouped_reduction(
     *,
     axis: int = -1,
     size: int | None = None,
-    fill_value=None,
-    dtype=None,
+    fill_value: Any = None,
+    dtype: Any = None,
 ) -> np.ndarray:
     """Custom grouped reduction for flox.Aggregation to get most common label.
 
@@ -242,7 +235,7 @@ def _custom_grouped_reduction(
     Returns:
         np.ndarray with array.shape[-1] == size, containing a single value per group
     """
-    return npg.aggregate_numpy.aggregate(
+    agg: np.ndarray = npg.aggregate_numpy.aggregate(
         group_idx,
         array,
         func=_most_common_label,
@@ -251,3 +244,4 @@ def _custom_grouped_reduction(
         fill_value=fill_value,
         dtype=dtype,
     )
+    return agg

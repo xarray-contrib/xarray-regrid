@@ -95,7 +95,7 @@ class Regridder:
         self,
         ds_target_grid: xr.Dataset,
         time_dim: str = "time",
-        max_mem: int = 1e9
+        max_mem: int = int(1e9),
     ) -> xr.DataArray | xr.Dataset:
         """Regrid by taking the most common value within the new grid cells.
 
