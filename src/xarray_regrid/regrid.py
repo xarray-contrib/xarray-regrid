@@ -99,7 +99,12 @@ class Regridder:
     ) -> xr.DataArray | xr.Dataset:
         """Regrid by taking the most common value within the new grid cells.
 
-        To be used for regridding data to a much coarser resolution.
+        To be used for regridding data to a much coarser resolution, not for regridding
+        when the source and target grids are of a similar resolution.
+
+        Note that in the case of two unqiue values with the same count, the behaviour
+        is not deterministic, and the resulting "most common" one will randomly be
+        either of the two.
 
         Args:
             ds_target_grid: Target grid dataset

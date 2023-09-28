@@ -1,4 +1,3 @@
-from collections.abc import Hashable
 from dataclasses import dataclass
 
 import numpy as np
@@ -157,9 +156,9 @@ def common_coords(
     data1: xr.DataArray | xr.Dataset,
     data2: xr.DataArray | xr.Dataset,
     remove_coord: str | None = None,
-) -> set[Hashable]:
+) -> list[str]:
     """Return a set of coords which two dataset/arrays have in common."""
     coords = set(data1.coords).intersection(set(data2.coords))
     if remove_coord in coords:
         coords.remove(remove_coord)
-    return coords
+    return sorted([str(coord) for coord in coords])
