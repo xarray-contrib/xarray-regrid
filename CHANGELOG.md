@@ -8,7 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 Added:
  - xarray DataArrays are now supported
- - A conservative regridding method has been added, along with a benchmark notebook.
+ - Conservative regridding method, along with a benchmark notebook.
+ - A "most common value" regridding method, along with a demo notebook.
 
 Changed:
  - The API has changed. Regridding is now done with `xr.Dataset.regrid.method()`. 
