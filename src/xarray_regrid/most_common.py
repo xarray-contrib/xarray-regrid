@@ -153,6 +153,7 @@ def most_common(data: xr.Dataset, target_ds: xr.Dataset, time_dim: str) -> xr.Da
     Returns:
         xarray.dataset with regridded land cover categorical data.
     """
+    dim_order = data.dims
     coords = utils.common_coords(data, target_ds, remove_coord=time_dim)
     bounds = tuple(
         _construct_intervals(target_ds[coord].to_numpy()) for coord in coords
@@ -189,7 +190,7 @@ def most_common(data: xr.Dataset, target_ds: xr.Dataset, time_dim: str) -> xr.Da
     for coord in coords:
         ds_regrid[coord] = target_ds[coord]
 
-    return ds_regrid
+    return ds_regrid.transpose(*dim_order)
 
 
 def _construct_intervals(coord: np.ndarray) -> pd.IntervalIndex:
