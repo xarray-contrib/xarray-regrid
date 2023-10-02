@@ -7,7 +7,9 @@ With xarray-regrid it is possible to regrid between two rectilinear grids. The f
  - Nearest-neighbor
  - Conservative
  - Cubic
- - "Most common value"
+ - "Most common value" (zonal statistics)
+
+Note that "Most common value" is designed to regrid categorical data to a coarse resolution. For regridding categorical data to a finer resolution, please use "nearest-neighbor" regridder.
 
 ## Installation
 
