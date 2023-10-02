@@ -142,10 +142,6 @@ def most_common(data: xr.Dataset, target_ds: xr.Dataset, time_dim: str) -> xr.Da
     check the following example:
     https://flox.readthedocs.io/en/latest/user-stories/custom-aggregations.html
 
-    Note that this module can not handle large dataset if it does not fit into the
-    memory. In that case, please first coarsen the land cover data with the `coarse`
-    function and then apply the regridder.
-
     Args:
         data: Input dataset.
         target_ds: Dataset which coordinates the input dataset should be regrid to.
