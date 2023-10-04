@@ -100,3 +100,25 @@ def test_conservative_regridder(conservative_input_data, conservative_sample_gri
         rtol=0.002,
         atol=2e-6,
     )
+
+def test_conservative_nans(conservative_input_data, conservative_sample_grid):
+    ds = conservative_input_data
+    ds["tp"] = ds["tp"].where(ds.latitude >= 0).where(ds.longitude < 180)
+    ds_regrid = ds.regrid.conservative(
+        conservative_sample_grid, latitude_coord="latitude"
+    )
+    ds_cdo = xr.open_dataset(CDO_DATA["conservative"])
+
+    # Cut of the edges: edge performance to be improved later (hopefully)
+    no_edges = {"latitude": slice(-85, 85), "longitude": slice(5, 355)}
+    no_nans = {"latitude": slice(1, 90), "longitude": slice(None, 179)}
+    xr.testing.assert_allclose(
+        ds_regrid["tp"]
+        .sel(no_edges)
+        .sel(no_nans)
+        .compute()
+        .transpose("time", "latitude", "longitude"),
+        ds_cdo["tp"].sel(no_edges).sel(no_nans).compute(),
+        rtol=0.002,
+        atol=2e-6,
+    )
