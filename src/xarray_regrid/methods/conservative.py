@@ -132,6 +132,7 @@ def apply_weights(
     da: xr.DataArray, weights: np.ndarray, coord_name: Hashable, new_coords: np.ndarray
 ) -> xr.DataArray:
     """Apply the weights to convert data to the new coordinates."""
+    new_data: np.ndarray | dask.array.Array
     if da.chunks is not None:
         # Dask routine
         new_data = compute_einsum_dask(da, weights)
@@ -152,8 +153,9 @@ def apply_weights(
     )
 
 
-def compute_einsum_dask(da: xr.DataArray, weights: np.ndarray) -> dask.array:
+def compute_einsum_dask(da: xr.DataArray, weights: np.ndarray) -> dask.array.Array:
     """Compute the einsum between dask data and weights, and mask NaNs if needed."""
+    new_data: dask.array.Array
     if np.any(np.isnan(da.data)):
         new_data = dask.array.einsum(
             "i...,ij->j...", da.fillna(0).data, weights, optimize="greedy"
@@ -161,7 +163,7 @@ def compute_einsum_dask(da: xr.DataArray, weights: np.ndarray) -> dask.array:
         isnan = dask.array.einsum(
             "i...,ij->j...", np.isnan(da.data), weights, optimize="greedy"
         )
-        new_data[isnan>0] = np.nan
+        new_data[isnan > 0] = np.nan
     else:
         new_data = dask.array.einsum(
             "i...,ij->j...", da.data, weights, optimize="greedy"
@@ -171,10 +173,11 @@ def compute_einsum_dask(da: xr.DataArray, weights: np.ndarray) -> dask.array:
 
 def compute_einsum_numpy(da: xr.DataArray, weights: np.ndarray) -> np.ndarray:
     """Compute the einsum between numpy data and weights, and mask NaNs if needed."""
+    new_data: np.ndarray
     if np.any(np.isnan(da.data)):
         new_data = np.einsum("i...,ij->j...", da.fillna(0).data, weights)
         isnan = np.einsum("i...,ij->j...", np.isnan(da.data), weights)
-        new_data[isnan>0] = np.nan
+        new_data[isnan > 0] = np.nan
     else:
         new_data = np.einsum("i...,ij->j...", da.data, weights)
     return new_data

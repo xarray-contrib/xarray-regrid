@@ -44,4 +44,3 @@ def interp_regrid(
         coords=coords,
         method=method,
     )
-

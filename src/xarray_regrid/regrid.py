@@ -89,7 +89,9 @@ class Regridder:
         """
 
         ds_target_grid = validate_input(self._obj, ds_target_grid, time_dim)
-        return conservative.conservative_regrid(self._obj, ds_target_grid, latitude_coord)
+        return conservative.conservative_regrid(
+            self._obj, ds_target_grid, latitude_coord
+        )
 
     def most_common(
         self,
