@@ -6,6 +6,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## Unreleased
 
+## v0.2.1 (2023-09-05)
+
+Fixed:
+ - Datasets containing NaN values can now be regridded using the conservative method. This previously produced only NaN values.
 
 ## v0.2.0 (2023-09-02)
 
