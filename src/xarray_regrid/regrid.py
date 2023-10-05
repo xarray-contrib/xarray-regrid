@@ -1,6 +1,6 @@
 import xarray as xr
 
-from xarray_regrid import methods, most_common
+from xarray_regrid.methods import conservative, interp, most_common
 
 
 @xr.register_dataarray_accessor("regrid")
@@ -34,7 +34,7 @@ class Regridder:
             Data regridded to the target dataset coordinates.
         """
         ds_target_grid = validate_input(self._obj, ds_target_grid, time_dim)
-        return methods.interp_regrid(self._obj, ds_target_grid, "linear")
+        return interp.interp_regrid(self._obj, ds_target_grid, "linear")
 
     def nearest(
         self,
@@ -51,7 +51,7 @@ class Regridder:
             Data regridded to the target dataset coordinates.
         """
         ds_target_grid = validate_input(self._obj, ds_target_grid, time_dim)
-        return methods.interp_regrid(self._obj, ds_target_grid, "nearest")
+        return interp.interp_regrid(self._obj, ds_target_grid, "nearest")
 
     def cubic(
         self,
@@ -68,7 +68,7 @@ class Regridder:
         Returns:
             Data regridded to the target dataset coordinates.
         """
-        return methods.interp_regrid(self._obj, ds_target_grid, "cubic")
+        return interp.interp_regrid(self._obj, ds_target_grid, "cubic")
 
     def conservative(
         self,
@@ -89,7 +89,9 @@ class Regridder:
         """
 
         ds_target_grid = validate_input(self._obj, ds_target_grid, time_dim)
-        return methods.conservative_regrid(self._obj, ds_target_grid, latitude_coord)
+        return conservative.conservative_regrid(
+            self._obj, ds_target_grid, latitude_coord
+        )
 
     def most_common(
         self,

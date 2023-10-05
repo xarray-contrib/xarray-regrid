@@ -1,53 +1,12 @@
+"""Conservative regridding implementation."""
 from collections.abc import Hashable
-from typing import Literal, overload
+from typing import overload
 
 import dask.array
 import numpy as np
 import xarray as xr
 
 from xarray_regrid import utils
-
-
-@overload
-def interp_regrid(
-    data: xr.DataArray,
-    target_ds: xr.Dataset,
-    method: Literal["linear", "nearest", "cubic"],
-) -> xr.DataArray:
-    ...
-
-
-@overload
-def interp_regrid(
-    data: xr.Dataset,
-    target_ds: xr.Dataset,
-    method: Literal["linear", "nearest", "cubic"],
-) -> xr.Dataset:
-    ...
-
-
-def interp_regrid(
-    data: xr.DataArray | xr.Dataset,
-    target_ds: xr.Dataset,
-    method: Literal["linear", "nearest", "cubic"],
-) -> xr.DataArray | xr.Dataset:
-    """Refine a dataset using xarray's interp method.
-
-    Args:
-        data: Input dataset.
-        target_ds: Dataset which coordinates the input dataset should be regrid to.
-        method: Which interpolation method to use (e.g. 'linear', 'nearest').
-
-    Returns:
-        Regridded input dataset
-    """
-    coord_names = set(target_ds.coords).intersection(set(data.coords))
-    coords = {name: target_ds[name] for name in coord_names}
-
-    return data.interp(
-        coords=coords,
-        method=method,
-    )
 
 
 @overload
@@ -173,14 +132,13 @@ def apply_weights(
     da: xr.DataArray, weights: np.ndarray, coord_name: Hashable, new_coords: np.ndarray
 ) -> xr.DataArray:
     """Apply the weights to convert data to the new coordinates."""
+    new_data: np.ndarray | dask.array.Array
     if da.chunks is not None:
         # Dask routine
-        new_data = dask.array.einsum(
-            "i...,ij->j...", da.data, weights, optimize="greedy"
-        )
+        new_data = compute_einsum_dask(da, weights)
     else:
         # numpy routine
-        new_data = np.einsum("i...,ij->j...", da.data, weights)
+        new_data = compute_einsum_numpy(da, weights)
 
     coord_mapping = {coord_name: new_coords}
     coords = list(da.dims)
@@ -193,6 +151,36 @@ def apply_weights(
         coords=coord_mapping,
         name=da.name,
     )
+
+
+def compute_einsum_dask(da: xr.DataArray, weights: np.ndarray) -> dask.array.Array:
+    """Compute the einsum between dask data and weights, and mask NaNs if needed."""
+    new_data: dask.array.Array
+    if np.any(np.isnan(da.data)):
+        new_data = dask.array.einsum(
+            "i...,ij->j...", da.fillna(0).data, weights, optimize="greedy"
+        )
+        isnan = dask.array.einsum(
+            "i...,ij->j...", np.isnan(da.data), weights, optimize="greedy"
+        )
+        new_data[isnan > 0] = np.nan
+    else:
+        new_data = dask.array.einsum(
+            "i...,ij->j...", da.data, weights, optimize="greedy"
+        )
+    return new_data
+
+
+def compute_einsum_numpy(da: xr.DataArray, weights: np.ndarray) -> np.ndarray:
+    """Compute the einsum between numpy data and weights, and mask NaNs if needed."""
+    new_data: np.ndarray
+    if np.any(np.isnan(da.data)):
+        new_data = np.einsum("i...,ij->j...", da.fillna(0).data, weights)
+        isnan = np.einsum("i...,ij->j...", np.isnan(da.data), weights)
+        new_data[isnan > 0] = np.nan
+    else:
+        new_data = np.einsum("i...,ij->j...", da.data, weights)
+    return new_data
 
 
 def get_weights(source_coords: np.ndarray, target_coords: np.ndarray) -> np.ndarray:
