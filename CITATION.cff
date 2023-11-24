@@ -22,7 +22,7 @@ keywords:
   - conservative regridding
 license: Apache-2.0
 version: 0.2.2
-date-released: '2023-10-05'
+date-released: '2023-11-24'
 abstract: >
   xarray-regrid can regrid (geospatial) data to a new
   coordinate system.
