@@ -44,7 +44,6 @@ benchmarking = [
   "matplotlib",
 ]
 dev = [
-  "bump2version",
   "hatch",
   "ruff",
   "black[jupyter]",
