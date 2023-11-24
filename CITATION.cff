@@ -1,0 +1,42 @@
+cff-version: 1.2.0
+title: xarray-regrid
+message: >-
+  If you use this software, please cite it using the
+  metadata from this file.
+type: software
+authors:
+  - given-names: Bart
+    family-names: Schilperoort
+    email: b.schilperoort@esciencecenter.nl
+    affiliation: Netherlands eScience Center
+    orcid: 'https://orcid.org/0000-0003-4487-9822'
+  - given-names: Yang
+    family-names: Liu
+    orcid: 'https://orcid.org/0000-0002-1966-8460'
+    affiliation: Netherlands eScience Center
+repository-code: 'https://github.com/EXCITED-CO2/xarray-regrid'
+keywords:
+  - xarray
+  - geospatial
+  - regridding
+  - conservative regridding
+license: Apache-2.0
+version: 0.2.1
+date-released: '2023-10-05'
+abstract: >
+  xarray-regrid can regrid (geospatial) data to a new
+  coordinate system.
+
+
+  Features:
+
+  - Linear, nearest-neighbor, cubic, conservative regridding
+  methods.
+
+  - Fully implemented in Python, no conda or binaries
+  required.
+
+  - Both lazy and parallelized computation with Dask,.
+
+  - Benchmarks to validate the results against standard
+  methods are available.
