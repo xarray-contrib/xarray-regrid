@@ -6,6 +6,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## Unreleased
 
+## v0.2.2 (20203-11-24)
+
+Added:
+ - CITATION.cff file for Zenodo integration.
+
 ## v0.2.1 (2023-09-05)
 
 Fixed:
