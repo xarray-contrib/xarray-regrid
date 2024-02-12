@@ -46,7 +46,6 @@ benchmarking = [
 dev = [
   "hatch",
   "ruff",
-  "black[jupyter]",
   "mypy",
   "pytest",
   "pytest-cov",
@@ -63,22 +62,19 @@ features = ["dev", "benchmarking"]
 lint = [
   "ruff check .",
   "mypy src",
-  "black --check --diff .",
+  "ruff format . --check",
 ]
-format = ["black .", "lint",]
+format = ["ruff format .", "lint",]
 test = ["pytest ./src/ ./tests/ --doctest-modules",]
 coverage = [
   "pytest --cov --cov-report term --cov-report xml --junitxml=xunit-result.xml tests/",
 ]
 
-[tool.black]
-target-version = ["py310"]
-line-length = 88
-skip-string-normalization = true
-
 [tool.ruff]
 target-version = "py310"
 line-length = 88
+
+[tool.ruff.lint]
 select = [
   "A",
   "ARG",
@@ -115,19 +111,21 @@ ignore = [
   "S105", "S106", "S107",
   # Ignore complexity
   "C901", "PLR0911", "PLR0912", "PLR0913", "PLR0915",
+  # Causes conflicts with formatter
+  "ISC001",
 ]
 unfixable = [
   # Don't touch unused imports
   "F401",
 ]
 
-[tool.ruff.isort]
+[tool.ruff.lint.isort]
 known-first-party = ["xarray_regrid"]
 
-[tool.ruff.flake8-tidy-imports]
+[tool.ruff.lint.flake8-tidy-imports]
 ban-relative-imports = "all"
 
-[tool.ruff.per-file-ignores]
+[tool.ruff.lint.per-file-ignores]
 # Tests can use magic values, assertions, and relative imports
 "tests/**/*" = ["PLR2004", "S101", "TID252"]
 

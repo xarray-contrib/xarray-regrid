@@ -6,6 +6,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## Unreleased
 
+Fixed:
+ - Attributes are not lost when regridding with the conservative method.
+
+Changed:
+ - Moved to the Ruff formatter, instead of black.
+
 ## v0.2.2 (20203-11-24)
 
 Added:
