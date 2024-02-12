@@ -82,9 +82,7 @@ def test_most_common(dummy_lc_data, dummy_target_grid):
 
 def test_attrs_dataarray(dummy_lc_data, dummy_target_grid):
     dummy_lc_data["lc"].attrs = {"test": "testing"}
-    da_regrid = dummy_lc_data["lc"].regrid.most_common(
-        dummy_target_grid
-    )
+    da_regrid = dummy_lc_data["lc"].regrid.most_common(dummy_target_grid)
     assert da_regrid.attrs != {}
     assert da_regrid.attrs == dummy_lc_data["lc"].attrs
 

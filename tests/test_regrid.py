@@ -1,4 +1,3 @@
-from copy import deepcopy
 from pathlib import Path
 
 import pytest
@@ -150,3 +149,4 @@ def test_attrs_dataset_conservative(sample_input_data, sample_grid_ds):
         sample_grid_ds, latitude_coord="latitude"
     )
     assert ds_regrid.attrs == sample_input_data.attrs
+    assert ds_regrid["d2m"].attrs == sample_input_data["d2m"].attrs
