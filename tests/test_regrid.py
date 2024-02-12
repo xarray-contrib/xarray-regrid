@@ -1,3 +1,4 @@
+from copy import deepcopy
 from pathlib import Path
 
 import pytest
@@ -123,3 +124,29 @@ def test_conservative_nans(conservative_input_data, conservative_sample_grid):
         rtol=0.002,
         atol=2e-6,
     )
+
+
+@pytest.mark.parametrize("method", ["linear", "nearest", "cubic"])
+def test_attrs_dataarray(sample_input_data, sample_grid_ds, method):
+    regridder = getattr(sample_input_data["d2m"].regrid, method)
+    assert regridder(sample_grid_ds).attrs == sample_input_data["d2m"].attrs
+
+
+def test_attrs_dataarray_conservative(sample_input_data, sample_grid_ds):
+    da_regrid = sample_input_data["d2m"].regrid.conservative(
+        sample_grid_ds, latitude_coord="latitude"
+    )
+    assert da_regrid.attrs == sample_input_data["d2m"].attrs
+
+
+@pytest.mark.parametrize("method", ["linear", "nearest", "cubic"])
+def test_attrs_dataset(sample_input_data, sample_grid_ds, method):
+    regridder = getattr(sample_input_data.regrid, method)
+    assert regridder(sample_grid_ds).attrs == sample_input_data.attrs
+
+
+def test_attrs_dataset_conservative(sample_input_data, sample_grid_ds):
+    ds_regrid = sample_input_data.regrid.conservative(
+        sample_grid_ds, latitude_coord="latitude"
+    )
+    assert ds_regrid.attrs == sample_input_data.attrs

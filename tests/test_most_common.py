@@ -33,6 +33,7 @@ def dummy_lc_data():
             "longitude": (["longitude"], lon_coords),
             "latitude": (["latitude"], lat_coords),
         },
+        attrs={"test": "not empty"},
     )
 
 
@@ -77,3 +78,20 @@ def test_most_common(dummy_lc_data, dummy_target_grid):
         dummy_lc_data.regrid.most_common(dummy_target_grid)["lc"],
         expected["lc"],
     )
+
+
+def test_attrs_dataarray(dummy_lc_data, dummy_target_grid):
+    dummy_lc_data["lc"].attrs = {"test": "testing"}
+    da_regrid = dummy_lc_data["lc"].regrid.most_common(
+        dummy_target_grid
+    )
+    assert da_regrid.attrs != {}
+    assert da_regrid.attrs == dummy_lc_data["lc"].attrs
+
+
+def test_attrs_dataset(dummy_lc_data, dummy_target_grid):
+    ds_regrid = dummy_lc_data.regrid.most_common(
+        dummy_target_grid,
+    )
+    assert ds_regrid.attrs != {}
+    assert ds_regrid.attrs == dummy_lc_data.attrs
