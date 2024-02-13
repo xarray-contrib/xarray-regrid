@@ -85,6 +85,7 @@ def test_attrs_dataarray(dummy_lc_data, dummy_target_grid):
     da_regrid = dummy_lc_data["lc"].regrid.most_common(dummy_target_grid)
     assert da_regrid.attrs != {}
     assert da_regrid.attrs == dummy_lc_data["lc"].attrs
+    assert da_regrid["longitude"].attrs == dummy_lc_data["longitude"].attrs
 
 
 def test_attrs_dataset(dummy_lc_data, dummy_target_grid):
@@ -93,3 +94,4 @@ def test_attrs_dataset(dummy_lc_data, dummy_target_grid):
     )
     assert ds_regrid.attrs != {}
     assert ds_regrid.attrs == dummy_lc_data.attrs
+    assert ds_regrid["longitude"].attrs == dummy_lc_data["longitude"].attrs
