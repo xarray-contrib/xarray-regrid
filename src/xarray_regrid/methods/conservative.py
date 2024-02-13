@@ -80,10 +80,10 @@ def conservative_regrid_dataset(
     data_vars: list[str] = list(data.data_vars)
     data_coords: list[str] = list(data.coords)
     dataarrays = [data[var] for var in data_vars]
-    datacoords = [data[var] for var in data_coords]
+
     attrs = data.attrs
     da_attrs = [da.attrs for da in dataarrays]
-    dcrds_attrs = [dcrds.attrs for dcrds in datacoords]
+    coord_attrs = [data[coord].attrs for coord in data_coords]
 
     for coord in coords:
         target_coords = coords[coord].to_numpy()
@@ -103,12 +103,16 @@ def conservative_regrid_dataset(
                 da = dataarrays[i].transpose(coord, ...)
                 dataarrays[i] = apply_weights(da, weights, coord, target_coords)
 
-    for da, _attr in zip(dataarrays, da_attrs, strict=True):
-        da.attrs = _attr
-    for dcrd, _attr in zip(datacoords, dcrds_attrs, strict=True):
-        dcrd.attrs = _attr
+    for da, attr in zip(dataarrays, da_attrs, strict=True):
+        da.attrs = attr
     regridded = xr.merge(dataarrays)
+
     regridded.attrs = attrs
+
+    new_coords = [regridded[coord] for coord in data_coords]
+    for coord, attr in zip(new_coords, coord_attrs, strict=True):
+        coord.attrs = attr
+
     return regridded  # TODO: add other coordinates/data variables back in.
 
 
@@ -119,9 +123,10 @@ def conservative_regrid_dataarray(
 ) -> xr.DataArray:
     """DataArray implementation of the conservative regridding method."""
     data_coords: list[str] = list(data.coords)
-    datacoords = [data[var] for var in data_coords]
+
     attrs = data.attrs
-    dcrds_attrs = [dcrds.attrs for dcrds in datacoords]
+    coord_attrs = [data[coord].attrs for coord in data_coords]
+
     for coord in coords:
         if coord in data.coords:
             target_coords = coords[coord].to_numpy()
@@ -139,9 +144,12 @@ def conservative_regrid_dataarray(
 
             data = data.transpose(coord, ...)
             data = apply_weights(data, weights, coord, target_coords)
-    for dcrd, _attr in zip(datacoords, dcrds_attrs, strict=True):
-        dcrd.attrs = _attr
+
+    new_coords = [data[coord] for coord in data_coords]
+    for coord, attr in zip(new_coords, coord_attrs, strict=True):
+        coord.attrs = attr
     data.attrs = attrs
+
     return data
 
 
