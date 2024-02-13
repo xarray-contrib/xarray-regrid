@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 ## Unreleased
 
 Fixed:
- - Attributes are not lost when regridding with the conservative method.
+ - Ensured all attributes are kept upon regridding (dataset, variable and coordinate attrs).
 
 Changed:
  - Moved to the Ruff formatter, instead of black.
