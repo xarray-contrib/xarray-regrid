@@ -151,6 +151,8 @@ def most_common(data: xr.Dataset, target_ds: xr.Dataset, time_dim: str) -> xr.Da
     """
     dim_order = data.dims
     coords = utils.common_coords(data, target_ds, remove_coord=time_dim)
+    coord_attrs = {coord: data[coord].attrs for coord in target_ds.coords}
+
     bounds = tuple(
         _construct_intervals(target_ds[coord].to_numpy()) for coord in coords
     )
@@ -185,6 +187,7 @@ def most_common(data: xr.Dataset, target_ds: xr.Dataset, time_dim: str) -> xr.Da
     ds_regrid = ds_regrid.rename({f"{coord}_bins": coord for coord in coords})
     for coord in coords:
         ds_regrid[coord] = target_ds[coord]
+        ds_regrid[coord].attrs = coord_attrs[coord]
 
     return ds_regrid.transpose(*dim_order)
 
