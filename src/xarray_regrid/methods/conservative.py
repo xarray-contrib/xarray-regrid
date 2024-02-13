@@ -58,6 +58,7 @@ def conservative_regrid(
     dim_order = list(target_ds.dims)
 
     coord_names = set(target_ds.coords).intersection(set(data.coords))
+    target_ds = target_ds.sortby(list(coord_names))
     coords = {name: target_ds[name] for name in coord_names}
     data = data.sortby(list(coord_names))
 

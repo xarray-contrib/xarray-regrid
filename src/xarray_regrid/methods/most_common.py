@@ -61,6 +61,7 @@ def most_common_wrapper(
         data = data.to_dataset(name=da_name)
 
     coords = utils.common_coords(data, target_ds)
+    target_ds = target_ds.sortby(list(coords))
     coord_size = [data[coord].size for coord in coords]
     mem_usage = np.prod(coord_size) * np.zeros((1,), dtype=np.int64).itemsize
 
