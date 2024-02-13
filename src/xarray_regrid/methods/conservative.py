@@ -78,9 +78,12 @@ def conservative_regrid_dataset(
 ) -> xr.Dataset:
     """Dataset implementation of the conservative regridding method."""
     data_vars: list[str] = list(data.data_vars)
+    data_coords: list[str] = list(data.coords)
     dataarrays = [data[var] for var in data_vars]
+    datacoords = [data[var] for var in data_coords]
     attrs = data.attrs
     da_attrs = [da.attrs for da in dataarrays]
+    dcrds_attrs = [dcrds.attrs for dcrds in datacoords]
 
     for coord in coords:
         target_coords = coords[coord].to_numpy()
@@ -102,6 +105,8 @@ def conservative_regrid_dataset(
 
     for da, _attr in zip(dataarrays, da_attrs, strict=True):
         da.attrs = _attr
+    for dcrd, _attr in zip(datacoords, dcrds_attrs, strict=True):
+        dcrd.attrs = _attr
     regridded = xr.merge(dataarrays)
     regridded.attrs = attrs
     return regridded  # TODO: add other coordinates/data variables back in.
@@ -113,7 +118,10 @@ def conservative_regrid_dataarray(
     latitude_coord: str,
 ) -> xr.DataArray:
     """DataArray implementation of the conservative regridding method."""
+    data_coords: list[str] = list(data.coords)
+    datacoords = [data[var] for var in data_coords]
     attrs = data.attrs
+    dcrds_attrs = [dcrds.attrs for dcrds in datacoords]
     for coord in coords:
         if coord in data.coords:
             target_coords = coords[coord].to_numpy()
@@ -131,6 +139,8 @@ def conservative_regrid_dataarray(
 
             data = data.transpose(coord, ...)
             data = apply_weights(data, weights, coord, target_coords)
+    for dcrd, _attr in zip(datacoords, dcrds_attrs, strict=True):
+        dcrd.attrs = _attr
     data.attrs = attrs
     return data
 
