@@ -128,7 +128,9 @@ def test_conservative_nans(conservative_input_data, conservative_sample_grid):
 @pytest.mark.parametrize("method", ["linear", "nearest", "cubic"])
 def test_attrs_dataarray(sample_input_data, sample_grid_ds, method):
     regridder = getattr(sample_input_data["d2m"].regrid, method)
-    assert regridder(sample_grid_ds).attrs == sample_input_data["d2m"].attrs
+    da_regrid = regridder(sample_grid_ds)
+    assert da_regrid.attrs == sample_input_data["d2m"].attrs
+    assert da_regrid["longitude"].attrs == sample_input_data["longitude"].attrs
 
 
 def test_attrs_dataarray_conservative(sample_input_data, sample_grid_ds):
@@ -136,12 +138,15 @@ def test_attrs_dataarray_conservative(sample_input_data, sample_grid_ds):
         sample_grid_ds, latitude_coord="latitude"
     )
     assert da_regrid.attrs == sample_input_data["d2m"].attrs
+    assert da_regrid["longitude"].attrs == sample_input_data["longitude"].attrs
 
 
 @pytest.mark.parametrize("method", ["linear", "nearest", "cubic"])
 def test_attrs_dataset(sample_input_data, sample_grid_ds, method):
     regridder = getattr(sample_input_data.regrid, method)
-    assert regridder(sample_grid_ds).attrs == sample_input_data.attrs
+    ds_regrid = regridder(sample_grid_ds)
+    assert ds_regrid.attrs == sample_input_data.attrs
+    assert ds_regrid["longitude"].attrs == sample_input_data["longitude"].attrs
 
 
 def test_attrs_dataset_conservative(sample_input_data, sample_grid_ds):
@@ -150,3 +155,4 @@ def test_attrs_dataset_conservative(sample_input_data, sample_grid_ds):
     )
     assert ds_regrid.attrs == sample_input_data.attrs
     assert ds_regrid["d2m"].attrs == sample_input_data["d2m"].attrs
+    assert ds_regrid["longitude"].attrs == sample_input_data["longitude"].attrs
