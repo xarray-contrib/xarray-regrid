@@ -39,8 +39,15 @@ def interp_regrid(
     """
     coord_names = set(target_ds.coords).intersection(set(data.coords))
     coords = {name: target_ds[name] for name in coord_names}
+    coord_attrs = {coord: data[coord].attrs for coord in coord_names}
 
-    return data.interp(
+    interped = data.interp(
         coords=coords,
         method=method,
     )
+
+    # xarray's interp drops some of the coordinate's attributes (e.g. long_name)
+    for coord in coord_names:
+        interped[coord].attrs = coord_attrs[coord]
+
+    return interped

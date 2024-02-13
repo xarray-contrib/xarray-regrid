@@ -77,8 +77,8 @@ def conservative_regrid_dataset(
     latitude_coord: str,
 ) -> xr.Dataset:
     """Dataset implementation of the conservative regridding method."""
-    data_vars: list[str] = list(data.data_vars)
-    data_coords: list[str] = list(data.coords)
+    data_vars = list(data.data_vars)
+    data_coords = list(data.coords)
     dataarrays = [data[var] for var in data_vars]
 
     attrs = data.attrs
@@ -122,7 +122,7 @@ def conservative_regrid_dataarray(
     latitude_coord: str,
 ) -> xr.DataArray:
     """DataArray implementation of the conservative regridding method."""
-    data_coords: list[str] = list(data.coords)
+    data_coords = list(data.coords)
 
     attrs = data.attrs
     coord_attrs = [data[coord].attrs for coord in data_coords]
