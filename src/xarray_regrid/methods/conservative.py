@@ -58,18 +58,25 @@ def conservative_regrid(
     dim_order = list(target_ds.dims)
 
     coord_names = set(target_ds.coords).intersection(set(data.coords))
-    target_ds = target_ds.sortby(list(coord_names))
-    coords = {name: target_ds[name] for name in coord_names}
+    target_ds_sorted = target_ds.sortby(list(coord_names))
+    coords = {name: target_ds_sorted[name] for name in coord_names}
     data = data.sortby(list(coord_names))
 
     if isinstance(data, xr.Dataset):
-        return conservative_regrid_dataset(data, coords, latitude_coord).transpose(
+        regridded_data = conservative_regrid_dataset(data, coords, latitude_coord).transpose(
             *dim_order, ...
         )
     else:
-        return conservative_regrid_dataarray(data, coords, latitude_coord).transpose(
+        regridded_data = conservative_regrid_dataarray(data, coords, latitude_coord).transpose(
             *dim_order, ...
         )
+    
+    for coord in target_ds.coords:
+        regridded_data = regridded_data.sortby(
+            coord, ascending=(target_ds[coord].diff(coord) >= 0).all()
+        )
+        
+    return regridded_data
 
 
 def conservative_regrid_dataset(
