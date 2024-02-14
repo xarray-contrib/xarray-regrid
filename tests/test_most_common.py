@@ -102,7 +102,7 @@ def test_coord_order_dataarray(dummy_lc_data, dummy_target_grid):
     da_regrid = dummy_lc_data["lc"].regrid.most_common(dummy_target_grid)
     assert (da_regrid["latitude"].data == dummy_target_grid["latitude"].data).all()
     assert (da_regrid["longitude"].data == dummy_target_grid["longitude"].data).all()
-    
+
     dummy_target_grid["latitude"] = list(reversed(dummy_target_grid["latitude"]))
     da_regrid = dummy_lc_data["lc"].regrid.most_common(dummy_target_grid)
     assert (da_regrid["latitude"].data == dummy_target_grid["latitude"].data).all()
@@ -120,7 +120,7 @@ def test_coord_order_dataset(dummy_lc_data, dummy_target_grid):
     )
     assert (ds_regrid["latitude"].data == dummy_target_grid["latitude"].data).all()
     assert (ds_regrid["longitude"].data == dummy_target_grid["longitude"].data).all()
-    
+
     dummy_target_grid["latitude"] = list(reversed(dummy_target_grid["latitude"]))
     ds_regrid = dummy_lc_data.regrid.most_common(
         dummy_target_grid,

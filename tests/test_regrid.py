@@ -165,7 +165,7 @@ def test_coord_order_dataarray(sample_input_data, sample_grid_ds, method):
     da_regrid = regridder(sample_grid_ds)
     assert (da_regrid["latitude"].data == sample_grid_ds["latitude"].data).all()
     assert (da_regrid["longitude"].data == sample_grid_ds["longitude"].data).all()
-    
+
     sample_grid_ds["latitude"] = list(reversed(sample_grid_ds["latitude"]))
     da_regrid = regridder(sample_grid_ds)
     assert (da_regrid["latitude"].data == sample_grid_ds["latitude"].data).all()
@@ -176,7 +176,7 @@ def test_coord_order_dataarray(sample_input_data, sample_grid_ds, method):
     assert (da_regrid["latitude"].data == sample_grid_ds["latitude"].data).all()
     assert (da_regrid["longitude"].data == sample_grid_ds["longitude"].data).all()
 
-    
+
 def test_coord_order_dataarray_conservative(sample_input_data, sample_grid_ds):
     da_regrid = sample_input_data["d2m"].regrid.conservative(
         sample_grid_ds, latitude_coord="latitude"
@@ -205,7 +205,7 @@ def test_coord_order_dataset(sample_input_data, sample_grid_ds, method):
     ds_regrid = regridder(sample_grid_ds)
     assert (ds_regrid["latitude"].data == sample_grid_ds["latitude"].data).all()
     assert (ds_regrid["longitude"].data == sample_grid_ds["longitude"].data).all()
-    
+
     sample_grid_ds["latitude"] = list(reversed(sample_grid_ds["latitude"]))
     ds_regrid = regridder(sample_grid_ds)
     assert (ds_regrid["latitude"].data == sample_grid_ds["latitude"].data).all()
