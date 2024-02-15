@@ -1,7 +1,9 @@
+from copy import deepcopy
 from pathlib import Path
 
 import pytest
 import xarray as xr
+from numpy.testing import assert_array_equal
 
 import xarray_regrid
 
@@ -14,9 +16,15 @@ CDO_DATA = {
 }
 
 
+@pytest.fixture(scope="session")
+def load_input_data() -> xr.Dataset:
+    ds = xr.open_dataset(DATA_PATH / "era5_2m_dewpoint_temperature_2000_monthly.nc")
+    return ds.compute()
+
+
 @pytest.fixture
-def sample_input_data() -> xr.Dataset:
-    return xr.open_dataset(DATA_PATH / "era5_2m_dewpoint_temperature_2000_monthly.nc")
+def sample_input_data(load_input_data) -> xr.Dataset:
+    return deepcopy(load_input_data)
 
 
 @pytest.fixture
@@ -63,9 +71,15 @@ def test_basic_regridders_da(sample_input_data, sample_grid_ds, method, cdo_file
     xr.testing.assert_allclose(da_regrid.compute(), ds_cdo["d2m"].compute())
 
 
+@pytest.fixture(scope="session")
+def load_conservative_input_data() -> xr.Dataset:
+    ds = xr.open_dataset(DATA_PATH / "era5_total_precipitation_2020_monthly.nc")
+    return ds.compute()
+
+
 @pytest.fixture
-def conservative_input_data() -> xr.Dataset:
-    return xr.open_dataset(DATA_PATH / "era5_total_precipitation_2020_monthly.nc")
+def conservative_input_data(load_conservative_input_data) -> xr.Dataset:
+    return deepcopy(load_conservative_input_data)
 
 
 @pytest.fixture
@@ -156,3 +170,49 @@ def test_attrs_dataset_conservative(sample_input_data, sample_grid_ds):
     assert ds_regrid.attrs == sample_input_data.attrs
     assert ds_regrid["d2m"].attrs == sample_input_data["d2m"].attrs
     assert ds_regrid["longitude"].attrs == sample_input_data["longitude"].attrs
+
+
+class TestCoordOrder:
+    @pytest.mark.parametrize("method", ["linear", "nearest", "cubic"])
+    @pytest.mark.parametrize("dataarray", [True, False])
+    def test_original(self, sample_input_data, sample_grid_ds, method, dataarray):
+        input_data = sample_input_data["d2m"] if dataarray else sample_input_data
+        regridder = getattr(input_data.regrid, method)
+        ds_regrid = regridder(sample_grid_ds)
+        assert_array_equal(ds_regrid["latitude"], sample_grid_ds["latitude"])
+        assert_array_equal(ds_regrid["longitude"], sample_grid_ds["longitude"])
+
+    @pytest.mark.parametrize("coord", ["latitude", "longitude"])
+    @pytest.mark.parametrize("method", ["linear", "nearest", "cubic"])
+    @pytest.mark.parametrize("dataarray", [True, False])
+    def test_reversed(
+        self, sample_input_data, sample_grid_ds, method, coord, dataarray
+    ):
+        input_data = sample_input_data["d2m"] if dataarray else sample_input_data
+        regridder = getattr(input_data.regrid, method)
+        sample_grid_ds[coord] = list(reversed(sample_grid_ds[coord]))
+        ds_regrid = regridder(sample_grid_ds)
+        assert_array_equal(ds_regrid["latitude"], sample_grid_ds["latitude"])
+        assert_array_equal(ds_regrid["longitude"], sample_grid_ds["longitude"])
+
+    @pytest.mark.parametrize("dataarray", [True, False])
+    def test_conservative_original(self, sample_input_data, sample_grid_ds, dataarray):
+        input_data = sample_input_data["d2m"] if dataarray else sample_input_data
+        ds_regrid = input_data.regrid.conservative(
+            sample_grid_ds, latitude_coord="latitude"
+        )
+        assert_array_equal(ds_regrid["latitude"], sample_grid_ds["latitude"])
+        assert_array_equal(ds_regrid["longitude"], sample_grid_ds["longitude"])
+
+    @pytest.mark.parametrize("coord", ["latitude", "longitude"])
+    @pytest.mark.parametrize("dataarray", [True, False])
+    def test_conservative_reversed(
+        self, sample_input_data, sample_grid_ds, coord, dataarray
+    ):
+        input_data = sample_input_data["d2m"] if dataarray else sample_input_data
+        sample_grid_ds[coord] = list(reversed(sample_grid_ds[coord]))
+        ds_regrid = input_data.regrid.conservative(
+            sample_grid_ds, latitude_coord="latitude"
+        )
+        assert_array_equal(ds_regrid["latitude"], sample_grid_ds["latitude"])
+        assert_array_equal(ds_regrid["longitude"], sample_grid_ds["longitude"])

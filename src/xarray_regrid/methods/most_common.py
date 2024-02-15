@@ -61,15 +61,18 @@ def most_common_wrapper(
         data = data.to_dataset(name=da_name)
 
     coords = utils.common_coords(data, target_ds)
+    target_ds_sorted = target_ds.sortby(list(coords))
     coord_size = [data[coord].size for coord in coords]
     mem_usage = np.prod(coord_size) * np.zeros((1,), dtype=np.int64).itemsize
 
     if max_mem is not None and mem_usage > max_mem:
         result = split_combine_most_common(
-            data=data, target_ds=target_ds, time_dim=time_dim, max_mem=max_mem
+            data=data, target_ds=target_ds_sorted, time_dim=time_dim, max_mem=max_mem
         )
     else:
-        result = most_common(data=data, target_ds=target_ds, time_dim=time_dim)
+        result = most_common(data=data, target_ds=target_ds_sorted, time_dim=time_dim)
+
+    result = result.reindex_like(target_ds, copy=False)
 
     if da_name is not None:
         return result[da_name]
