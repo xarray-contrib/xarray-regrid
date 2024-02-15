@@ -1,6 +1,7 @@
 import numpy as np
 import pytest
 import xarray as xr
+from numpy.testing import assert_array_equal
 
 from xarray_regrid import Grid, create_regridding_dataset
 
@@ -97,40 +98,19 @@ def test_attrs_dataset(dummy_lc_data, dummy_target_grid):
     assert ds_regrid["longitude"].attrs == dummy_lc_data["longitude"].attrs
 
 
-
-def test_coord_order_dataarray(dummy_lc_data, dummy_target_grid):
-    da_regrid = dummy_lc_data["lc"].regrid.most_common(dummy_target_grid)
-    assert (da_regrid["latitude"].data == dummy_target_grid["latitude"].data).all()
-    assert (da_regrid["longitude"].data == dummy_target_grid["longitude"].data).all()
-
-    dummy_target_grid["latitude"] = list(reversed(dummy_target_grid["latitude"]))
-    da_regrid = dummy_lc_data["lc"].regrid.most_common(dummy_target_grid)
-    assert (da_regrid["latitude"].data == dummy_target_grid["latitude"].data).all()
-    assert (da_regrid["longitude"].data == dummy_target_grid["longitude"].data).all()
-
-    dummy_target_grid["longitude"] = list(reversed(dummy_target_grid["longitude"]))
-    da_regrid = dummy_lc_data["lc"].regrid.most_common(dummy_target_grid)
-    assert (da_regrid["latitude"].data == dummy_target_grid["latitude"].data).all()
-    assert (da_regrid["longitude"].data == dummy_target_grid["longitude"].data).all()
+@pytest.mark.parametrize("dataarray", [True, False])
+def test_coord_order_original(dummy_lc_data, dummy_target_grid, dataarray):
+    input_data = dummy_lc_data["lc"] if dataarray else dummy_lc_data
+    ds_regrid = input_data.regrid.most_common(dummy_target_grid)
+    assert_array_equal(ds_regrid["latitude"], dummy_target_grid["latitude"])
+    assert_array_equal(ds_regrid["longitude"], dummy_target_grid["longitude"])
 
 
-def test_coord_order_dataset(dummy_lc_data, dummy_target_grid):
-    ds_regrid = dummy_lc_data.regrid.most_common(
-        dummy_target_grid,
-    )
-    assert (ds_regrid["latitude"].data == dummy_target_grid["latitude"].data).all()
-    assert (ds_regrid["longitude"].data == dummy_target_grid["longitude"].data).all()
-
-    dummy_target_grid["latitude"] = list(reversed(dummy_target_grid["latitude"]))
-    ds_regrid = dummy_lc_data.regrid.most_common(
-        dummy_target_grid,
-    )
-    assert (ds_regrid["latitude"].data == dummy_target_grid["latitude"].data).all()
-    assert (ds_regrid["longitude"].data == dummy_target_grid["longitude"].data).all()
-
-    dummy_target_grid["longitude"] = list(reversed(dummy_target_grid["longitude"]))
-    ds_regrid = dummy_lc_data.regrid.most_common(
-        dummy_target_grid,
-    )
-    assert (ds_regrid["latitude"].data == dummy_target_grid["latitude"].data).all()
-    assert (ds_regrid["longitude"].data == dummy_target_grid["longitude"].data).all()
+@pytest.mark.parametrize("coord", ["latitude", "longitude"])
+@pytest.mark.parametrize("dataarray", [True, False])
+def test_coord_order_reversed(dummy_lc_data, dummy_target_grid, coord, dataarray):
+    input_data = dummy_lc_data["lc"] if dataarray else dummy_lc_data
+    dummy_target_grid[coord] = list(reversed(dummy_target_grid[coord]))
+    ds_regrid = input_data.regrid.most_common(dummy_target_grid)
+    assert_array_equal(ds_regrid["latitude"], dummy_target_grid["latitude"])
+    assert_array_equal(ds_regrid["longitude"], dummy_target_grid["longitude"])

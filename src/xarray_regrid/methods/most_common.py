@@ -72,10 +72,7 @@ def most_common_wrapper(
     else:
         result = most_common(data=data, target_ds=target_ds_sorted, time_dim=time_dim)
 
-    for coord in target_ds.coords:
-        result = result.sortby(
-            coord, ascending=(target_ds[coord].diff(coord) >= 0).all()
-        )
+    result = result.reindex_like(target_ds, copy=False)
 
     if da_name is not None:
         return result[da_name]

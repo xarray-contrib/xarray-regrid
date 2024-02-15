@@ -1,9 +1,9 @@
 from copy import deepcopy
 from pathlib import Path
 
-from numpy.testing import assert_array_equal
 import pytest
 import xarray as xr
+from numpy.testing import assert_array_equal
 
 import xarray_regrid
 
@@ -196,9 +196,7 @@ class TestCoordOrder:
         assert_array_equal(ds_regrid["longitude"], sample_grid_ds["longitude"])
 
     @pytest.mark.parametrize("dataarray", [True, False])
-    def test_conservative_original(
-        self, sample_input_data, sample_grid_ds, dataarray
-    ):
+    def test_conservative_original(self, sample_input_data, sample_grid_ds, dataarray):
         input_data = sample_input_data["d2m"] if dataarray else sample_input_data
         ds_regrid = input_data.regrid.conservative(
             sample_grid_ds, latitude_coord="latitude"

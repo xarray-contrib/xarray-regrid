@@ -64,19 +64,14 @@ def conservative_regrid(
 
     if isinstance(data, xr.Dataset):
         regridded_data = conservative_regrid_dataset(
-            data, coords, latitude_coord).transpose(
-            *dim_order, ...
-        )
+            data, coords, latitude_coord
+        ).transpose(*dim_order, ...)
     else:
-        regridded_data = conservative_regrid_dataarray(
-            data, coords, latitude_coord).transpose(
-            *dim_order, ...
-        )
+        regridded_data = conservative_regrid_dataarray(  # type: ignore
+            data, coords, latitude_coord
+        ).transpose(*dim_order, ...)
 
-    for coord in target_ds.coords:
-        regridded_data = regridded_data.sortby(
-            coord, ascending=(target_ds[coord].diff(coord) >= 0).all()
-        )
+    regridded_data = regridded_data.reindex_like(target_ds, copy=False)
 
     return regridded_data
 
