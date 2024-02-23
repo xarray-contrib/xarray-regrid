@@ -90,7 +90,11 @@ def conservative_regrid_dataset(
     da_attrs = [da.attrs for da in dataarrays]
     coord_attrs = [data[coord].attrs for coord in data_coords]
 
+    mask = {}
     for coord in coords:
+        mask[coord] = ((coords[coord] <= data[coord].max())
+                       & (coords[coord] >= data[coord].min()))
+
         target_coords = coords[coord].to_numpy()
         source_coords = data[coord].to_numpy()
         weights = get_weights(source_coords, target_coords)
@@ -111,6 +115,10 @@ def conservative_regrid_dataset(
     for da, attr in zip(dataarrays, da_attrs, strict=True):
         da.attrs = attr
     regridded = xr.merge(dataarrays)
+
+    # Replace zeros outside of original data grid with NaNs
+    for coord in coords:
+        regridded = regridded.where(mask[coord])
 
     regridded.attrs = attrs
 
@@ -133,6 +141,9 @@ def conservative_regrid_dataarray(
     coord_attrs = [data[coord].attrs for coord in data_coords]
 
     for coord in coords:
+        mask = ((coords[coord] <= data[coord].max())
+                & (coords[coord] >= data[coord].min()))
+
         if coord in data.coords:
             target_coords = coords[coord].to_numpy()
             source_coords = data[coord].to_numpy()
@@ -149,6 +160,9 @@ def conservative_regrid_dataarray(
 
             data = data.transpose(coord, ...)
             data = apply_weights(data, weights, coord, target_coords)
+
+            # Replace zeros outside of original data grid with NaNs
+            data = data.where(mask)
 
     new_coords = [data[coord] for coord in data_coords]
     for coord, attr in zip(new_coords, coord_attrs, strict=True):
