@@ -190,6 +190,12 @@ def most_common(data: xr.Dataset, target_ds: xr.Dataset, time_dim: str) -> xr.Da
     ds_regrid = ds_regrid.rename({f"{coord}_bins": coord for coord in coords})
     for coord in coords:
         ds_regrid[coord] = target_ds[coord]
+
+        # Replace zeros outside of original data grid with NaNs
+        mask = ((target_ds[coord] <= data[coord].max())
+                & (target_ds[coord] >= data[coord].min()))
+        ds_regrid = ds_regrid.where(mask)
+
         ds_regrid[coord].attrs = coord_attrs[coord]
 
     return ds_regrid.transpose(*dim_order)
