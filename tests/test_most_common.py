@@ -51,6 +51,19 @@ def dummy_target_grid():
     return create_regridding_dataset(new_grid)
 
 
+@pytest.fixture
+def oversized_dummy_target_grid():
+    new_grid = Grid(
+        north=48,
+        east=48,
+        south=-8,
+        west=-8,
+        resolution_lat=8,
+        resolution_lon=8,
+    )
+    return create_regridding_dataset(new_grid)
+
+
 def test_most_common(dummy_lc_data, dummy_target_grid):
     expected_data = np.array(
         [
@@ -77,6 +90,38 @@ def test_most_common(dummy_lc_data, dummy_target_grid):
     )
     xr.testing.assert_equal(
         dummy_lc_data.regrid.most_common(dummy_target_grid)["lc"],
+        expected["lc"],
+    )
+
+
+def test_oversized_most_common(dummy_lc_data, oversized_dummy_target_grid):
+    expected_data = np.array(
+        [
+            [np.NaN, np.NaN, np.NaN, np.NaN, np.NaN, np.NaN, np.NaN, np.NaN],
+            [np.NaN, 2, 2, 0, 0, 0, 0, np.NaN],
+            [np.NaN, 0, 0, 0, 0, 0, 0, np.NaN],
+            [np.NaN, 0, 0, 0, 0, 0, 0, np.NaN],
+            [np.NaN, 0, 0, 0, 0, 0, 0, np.NaN],
+            [np.NaN, 0, 0, 0, 0, 0, 0, np.NaN],
+            [np.NaN, 3, 3, 0, 0, 0, 1, np.NaN],
+            [np.NaN, np.NaN, np.NaN, np.NaN, np.NaN, np.NaN, np.NaN, np.NaN],
+        ]
+    )
+
+    lat_coords = np.linspace(-8, 48, num=8)
+    lon_coords = np.linspace(-8, 48, num=8)
+
+    expected = xr.Dataset(
+        data_vars={
+            "lc": (["longitude", "latitude"], expected_data),
+        },
+        coords={
+            "longitude": (["longitude"], lon_coords),
+            "latitude": (["latitude"], lat_coords),
+        },
+    )
+    xr.testing.assert_equal(
+        dummy_lc_data.regrid.most_common(oversized_dummy_target_grid)["lc"],
         expected["lc"],
     )
 
