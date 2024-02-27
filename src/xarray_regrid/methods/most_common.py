@@ -192,9 +192,10 @@ def most_common(data: xr.Dataset, target_ds: xr.Dataset, time_dim: str) -> xr.Da
         ds_regrid[coord] = target_ds[coord]
 
         # Replace zeros outside of original data grid with NaNs
-        mask = ((target_ds[coord] <= data[coord].max())
-                & (target_ds[coord] >= data[coord].min()))
-        ds_regrid = ds_regrid.where(mask)
+        uncovered_target_grid = (target_ds[coord] <= data[coord].max()) & (
+            target_ds[coord] >= data[coord].min()
+        )
+        ds_regrid = ds_regrid.where(uncovered_target_grid)
 
         ds_regrid[coord].attrs = coord_attrs[coord]
 

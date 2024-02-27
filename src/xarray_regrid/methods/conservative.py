@@ -90,10 +90,12 @@ def conservative_regrid_dataset(
     da_attrs = [da.attrs for da in dataarrays]
     coord_attrs = [data[coord].attrs for coord in data_coords]
 
-    mask = {}
+    # track which target coordinate values are not covered by the source grid
+    uncovered_target_grid = {}
     for coord in coords:
-        mask[coord] = ((coords[coord] <= data[coord].max())
-                       & (coords[coord] >= data[coord].min()))
+        uncovered_target_grid[coord] = (coords[coord] <= data[coord].max()) & (
+            coords[coord] >= data[coord].min()
+        )
 
         target_coords = coords[coord].to_numpy()
         source_coords = data[coord].to_numpy()
@@ -118,7 +120,7 @@ def conservative_regrid_dataset(
 
     # Replace zeros outside of original data grid with NaNs
     for coord in coords:
-        regridded = regridded.where(mask[coord])
+        regridded = regridded.where(uncovered_target_grid[coord])
 
     regridded.attrs = attrs
 
@@ -141,8 +143,9 @@ def conservative_regrid_dataarray(
     coord_attrs = [data[coord].attrs for coord in data_coords]
 
     for coord in coords:
-        mask = ((coords[coord] <= data[coord].max())
-                & (coords[coord] >= data[coord].min()))
+        uncovered_target_grid = (coords[coord] <= data[coord].max()) & (
+            coords[coord] >= data[coord].min()
+        )
 
         if coord in data.coords:
             target_coords = coords[coord].to_numpy()
@@ -162,7 +165,7 @@ def conservative_regrid_dataarray(
             data = apply_weights(data, weights, coord, target_coords)
 
             # Replace zeros outside of original data grid with NaNs
-            data = data.where(mask)
+            data = data.where(uncovered_target_grid)
 
     new_coords = [data[coord] for coord in data_coords]
     for coord, attr in zip(new_coords, coord_attrs, strict=True):
