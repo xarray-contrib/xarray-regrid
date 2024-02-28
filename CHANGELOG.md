@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 Fixed:
  - Ensured all attributes are kept upon regridding (dataset, variable and coordinate attrs).
+ - Regridding to larger grid now result in NaNs at locations outside of starting data grid.
 
 Changed:
  - Moved to the Ruff formatter, instead of black.
