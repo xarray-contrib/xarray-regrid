@@ -14,6 +14,11 @@ authors:
     family-names: Liu
     orcid: 'https://orcid.org/0000-0002-1966-8460'
     affiliation: Netherlands eScience Center
+  - given-names: Keith
+    family-names: Doore
+    orcid: 'https://orcid.org/0000-0001-5035-4016'
+    affiliation: United States Geological Survey
+    
 repository-code: 'https://github.com/EXCITED-CO2/xarray-regrid'
 keywords:
   - xarray
@@ -21,7 +26,7 @@ keywords:
   - regridding
   - conservative regridding
 license: Apache-2.0
-version: 0.2.2
+version: 0.2.3
 date-released: '2023-11-24'
 abstract: >
   xarray-regrid can regrid (geospatial) data to a new
