@@ -11,7 +11,7 @@ With xarray-regrid it is possible to regrid between two rectilinear grids. The f
 
 Note that "Most common value" is designed to regrid categorical data to a coarse resolution. For regridding categorical data to a finer resolution, please use "nearest-neighbor" regridder.
 
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.10203305.svg)](https://doi.org/10.5281/zenodo.10203305)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.10203304.svg)](https://doi.org/10.5281/zenodo.10203304)
 
 ## Installation
 
