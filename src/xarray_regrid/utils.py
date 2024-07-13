@@ -89,23 +89,32 @@ def create_regridding_dataset(
     )
 
 
-def to_intervalindex(coords: np.ndarray, resolution: float) -> pd.IntervalIndex:
-    """Convert a list of (regularly spaced) 1-d coordinates to pandas IntervalIndex.
+def to_intervalindex(coords: np.ndarray) -> pd.IntervalIndex:
+    """Convert a 1-d coordinate array to a pandas IntervalIndex. Take
+    the midpoints between the coordinates as the interval boundaries.
 
     Args:
         coords: 1-d array containing the coordinate values.
-        resolution: spatial resolution of the coordinates.
 
     Returns:
         A pandas IntervalIndex containing the intervals corresponding to the input
             coordinates.
     """
-    return pd.IntervalIndex(
-        [
-            pd.Interval(left=coord - resolution / 2, right=coord + resolution / 2)
-            for coord in coords
-        ]
-    )
+    if len(coords) > 1:
+        midpoints = (coords[:-1] + coords[1:]) / 2
+
+        # Extrapolate outer bounds beyond the first and last coordinates
+        left_bound = 2 * coords[0] - midpoints[0]
+        right_bound = 2 * coords[-1] - midpoints[-1]
+
+        breaks = np.concatenate([[left_bound], midpoints, [right_bound]])
+        intervals = pd.IntervalIndex.from_breaks(breaks)
+
+    else:
+        # If the target grid has a single point, set search interval to span all space
+        intervals = pd.IntervalIndex.from_breaks([-np.inf, np.inf])
+
+    return intervals
 
 
 def overlap(a: pd.IntervalIndex, b: pd.IntervalIndex) -> np.ndarray:
@@ -152,13 +161,20 @@ def create_dot_dataarray(
     )
 
 
-def common_coords(
-    data1: xr.DataArray | xr.Dataset,
-    data2: xr.DataArray | xr.Dataset,
-    remove_coord: str | None = None,
-) -> list[str]:
-    """Return a set of coords which two dataset/arrays have in common."""
-    coords = set(data1.coords).intersection(set(data2.coords))
-    if remove_coord in coords:
-        coords.remove(remove_coord)
-    return sorted([str(coord) for coord in coords])
+def call_on_dataset(func, obj, *args, **kwargs):
+    placeholder_name = "_UNNAMED_ARRAY"
+    if isinstance(obj, xr.DataArray):
+        tmp_name = obj.name if obj.name is not None else placeholder_name
+        ds = obj.to_dataset(name=tmp_name)
+    else:
+        ds = obj
+
+    result = func(ds, *args, **kwargs)
+
+    if isinstance(obj, xr.DataArray) and isinstance(result, xr.Dataset):
+        msg = "Trying to convert Dataset with more than one data variable to DataArray"
+        if len(result.data_vars) > 1:
+            raise TypeError(msg)
+        return next(iter(result.data_vars.values())).rename(obj.name)
+
+    return result

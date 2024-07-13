@@ -2,7 +2,6 @@
 from collections.abc import Hashable
 from typing import overload
 
-import dask.array
 import numpy as np
 import xarray as xr
 
@@ -63,30 +62,32 @@ def conservative_regrid(
     Returns:
         Regridded input dataset
     """
+    # Attempt to infer the latitude coordinate
     if latitude_coord is None:
         for coord in data.coords:
-            if "lat" in coord.lower():
+            if coord.lower().startswith("lat"):
                 latitude_coord = coord
                 break
-    if latitude_coord not in data.coords:
-        msg = "Latitude coord not in input data!"
-        raise ValueError(msg)
 
-    dim_order = list(target_ds.dims)
-
-    coord_names = set(target_ds.coords).intersection(set(data.coords))
-    target_ds_sorted = target_ds.sortby(list(coord_names))
-    coords = {name: target_ds_sorted[name] for name in coord_names}
+    # Make sure the regridding coordinates are sorted
+    coord_names = [coord for coord in target_ds.coords if coord in data.coords]
+    target_ds_sorted = target_ds.sortby(coord_names)
     data = data.sortby(list(coord_names))
+    coords = {name: target_ds_sorted[name] for name in coord_names}
 
     if isinstance(data, xr.Dataset):
         regridded_data = conservative_regrid_dataset(
             data, coords, latitude_coord, skipna, nan_threshold
-        ).transpose(*dim_order, ...)
+        )
     else:
-        regridded_data = conservative_regrid_dataarray(  # type: ignore
-            data, coords, latitude_coord, skipna, nan_threshold
-        ).transpose(*dim_order, ...)
+        regridded_data = utils.call_on_dataset(
+            conservative_regrid_dataset,
+            data,
+            coords,
+            latitude_coord,
+            skipna,
+            nan_threshold,
+        )
 
     regridded_data = regridded_data.reindex_like(target_ds, copy=False)
 
@@ -101,18 +102,15 @@ def conservative_regrid_dataset(
     nan_threshold: float,
 ) -> xr.Dataset:
     """Dataset implementation of the conservative regridding method."""
-    data_vars = list(data.data_vars)
-    data_coords = list(data.coords)
-    dataarrays = [data[var] for var in data_vars]
+    data_vars = dict(data.data_vars)
+    data_coords = dict(data.coords)
+    valid_fracs = {v: None for v in data_vars}
+    data_attrs = {v: data_vars[v].attrs for v in data_vars}
+    coord_attrs = {c: data_coords[c].attrs for c in data_coords}
+    ds_attrs = data.attrs
 
-    attrs = data.attrs
-    da_attrs = [da.attrs for da in dataarrays]
-    coord_attrs = [data[coord].attrs for coord in data_coords]
-
-    # track which target coordinate values are not covered by the source grid
-    uncovered_target_grid = {}
     for coord in coords:
-        uncovered_target_grid[coord] = (coords[coord] <= data[coord].max()) & (
+        covered_grid = (coords[coord] <= data[coord].max()) & (
             coords[coord] >= data[coord].min()
         )
 
@@ -121,151 +119,88 @@ def conservative_regrid_dataset(
         weights = get_weights(source_coords, target_coords)
 
         # Modify weights to correct for latitude distortion
-        if str(coord) == latitude_coord:
-            dot_array = utils.create_dot_dataarray(
-                weights, str(coord), target_coords, source_coords
-            )
-            dot_array = apply_spherical_correction(dot_array, latitude_coord)
-            weights = dot_array.to_numpy()
-
-        for i in range(len(dataarrays)):
-            if coord in dataarrays[i].coords:
-                da = dataarrays[i].transpose(coord, ...)
-                dataarrays[i] = apply_weights(
-                    da, weights, coord, target_coords, skipna, nan_threshold
-                )
-
-    for da, attr in zip(dataarrays, da_attrs, strict=True):
-        da.attrs = attr
-    regridded = xr.merge(dataarrays)
-
-    # Replace zeros outside of original data grid with NaNs
-    for coord in coords:
-        regridded = regridded.where(uncovered_target_grid[coord])
-
-    regridded.attrs = attrs
-
-    new_coords = [regridded[coord] for coord in data_coords]
-    for coord, attr in zip(new_coords, coord_attrs, strict=True):
-        coord.attrs = attr
-
-    return regridded  # TODO: add other coordinates/data variables back in.
-
-
-def conservative_regrid_dataarray(
-    data: xr.DataArray,
-    coords: dict[Hashable, xr.DataArray],
-    latitude_coord: str,
-    skipna: bool,
-    nan_threshold: float,
-) -> xr.DataArray:
-    """DataArray implementation of the conservative regridding method."""
-    data_coords = list(data.coords)
-
-    attrs = data.attrs
-    coord_attrs = [data[coord].attrs for coord in data_coords]
-
-    for coord in coords:
-        uncovered_target_grid = (coords[coord] <= data[coord].max()) & (
-            coords[coord] >= data[coord].min()
+        weights = utils.create_dot_dataarray(
+            weights, str(coord), target_coords, source_coords
         )
+        if str(coord) == latitude_coord:
+            weights = apply_spherical_correction(weights, latitude_coord)
 
-        if coord in data.coords:
-            target_coords = coords[coord].to_numpy()
-            source_coords = data[coord].to_numpy()
-
-            weights = get_weights(source_coords, target_coords)
-
-            # Modify weights to correct for latitude distortion
-            if str(coord) == latitude_coord:
-                dot_array = utils.create_dot_dataarray(
-                    weights, str(coord), target_coords, source_coords
+        for array in data_vars.keys():
+            if coord in data_vars[array].dims:
+                data_vars[array], valid_fracs[array] = apply_weights(
+                    data_vars[array], weights, coord, valid_fracs[array], skipna
                 )
-                dot_array = apply_spherical_correction(dot_array, latitude_coord)
-                weights = dot_array.to_numpy()
+                # Mask out any regridded points outside the original domain
+                data_vars[array] = data_vars[array].where(covered_grid)
 
-            data = data.transpose(coord, ...)
-            data = apply_weights(
-                data, weights, coord, target_coords, skipna, nan_threshold
-            )
+    if skipna:
+        # Mask out any points that don't meet the nan threshold
+        valid_threshold = get_valid_threshold(nan_threshold)
+        for array, da in data_vars.items():
+            data_vars[array] = da.where(valid_fracs[array] >= valid_threshold)
 
-            # Replace zeros outside of original data grid with NaNs
-            data = data.where(uncovered_target_grid)
+    for array, attrs in data_attrs.items():
+        data_vars[array].attrs = attrs
 
-    new_coords = [data[coord] for coord in data_coords]
-    for coord, attr in zip(new_coords, coord_attrs, strict=True):
-        coord.attrs = attr
-    data.attrs = attrs
+    ds_regridded = xr.Dataset(data_vars=data_vars, attrs=ds_attrs)
 
-    return data
+    for coord, attrs in coord_attrs.items():
+        if coord not in ds_regridded.coords:
+            # Add back any additional coordinates from the original dataset
+            ds_regridded[coord] = data_coords[coord]
+        ds_regridded[coord].attrs = attrs
+
+    return ds_regridded
 
 
 def apply_weights(
     da: xr.DataArray,
     weights: np.ndarray,
     coord_name: Hashable,
-    new_coords: np.ndarray,
+    valid_frac: xr.DataArray | None,
     skipna: bool,
-    nan_threshold: float,
-) -> xr.DataArray:
+) -> tuple[xr.DataArray, xr.DataArray]:
     """Apply the weights to convert data to the new coordinates."""
-    new_data: np.ndarray | dask.array.Array
-
-    new_data = compute_einsum(da, weights, skipna, nan_threshold)
-
-    coord_mapping = {coord_name: new_coords}
-    coords = list(da.dims)
-    coords.remove(coord_name)
-    for coord in coords:
-        coord_mapping[coord] = da[coord].to_numpy()
-
-    return xr.DataArray(
-        data=new_data,
-        coords=coord_mapping,
-        name=da.name,
-    )
-
-
-def compute_einsum(
-    da: xr.DataArray, weights: np.ndarray, skipna: bool, nan_threshold: float
-) -> np.ndarray | dask.array.Array:
-    """Compute the einsum between the data and weights. If nan-skipping is
-    enabled, renormalize the weights by the non-null input points, and keep
-    output points containing up to the specified fraction of NaN values."""
-    new_data: np.ndarray | dask.array.Array
+    coord_map = {f"target_{coord_name}": coord_name}
+    weights_norm = weights.copy()
 
     if skipna:
-        data = da.fillna(0).data
-        notnull = da.notnull().data
-    else:
-        data = da.data
+        notnull = da.notnull()
+        da = da.fillna(0)
+        # Renormalize the weights along this dim by the accumulated valid_frac
+        # along previous dimensions
+        if valid_frac is not None:
+            weights_norm = weights * valid_frac / valid_frac.mean(coord_name)
 
-    backend = np if da.chunks is None else dask.array
-    new_data = backend.einsum(
-        "i...,ij->j...", data, weights, optimize="greedy"
-    )
+    da_reduced = xr.dot(da, weights_norm, dim=coord_name, optimize=True)
+    da_reduced = da_reduced.rename(coord_map).transpose(*da.dims)
 
     if skipna:
-        valid_weight_sum = backend.einsum(
-            "i...,ij->j...", notnull, weights, optimize="greedy"
-        )
-        new_data = new_data / backend.clip(valid_weight_sum, 1e-6, None)
-        weight_threshold = get_weight_threshold(nan_threshold)
-        new_data = backend.where(valid_weight_sum > weight_threshold, new_data, np.nan)
+        weights_valid_sum = xr.dot(
+            weights_norm, notnull, dim=coord_name, optimize=True
+        ).rename(coord_map)
+        da_reduced /= weights_valid_sum.clip(1e-6, None)
 
-    return new_data
+        if valid_frac is None:
+            # Begin tracking the valid fraction
+            valid_frac = weights_valid_sum
+
+        else:
+            # Update the valid points on this dimension
+            valid_frac = xr.dot(
+                valid_frac, weights, dim=coord_name, optimize=True
+            ).rename(coord_map)
+            valid_frac = valid_frac.clip(0, 1)
+
+    return da_reduced, valid_frac
 
 
-def get_weight_threshold(nan_threshold: float) -> float:
-    """Make sure the specified nan_threshold is in [0,1], invert it,
-    and coerce to just above zero and below one to handle numerical
-    precision limitations in the weight sum."""
-    if not 0.0 <= nan_threshold <= 1.0:
-        msg = "nan_threshold must be between [0, 1]]"
-        raise ValueError(msg)
+def get_valid_threshold(nan_threshold: float) -> float:
+    """Invert the nan_threshold and coerce it to just above zero and below
+    one to handle numerical precision limitations in the weight sum."""
     # This matches xesmf where na_thresh=0 keeps points with any valid data
-    weight_threshold = 1 - np.clip(nan_threshold, 1e-6, 1.0 - 1e-6)
-    return weight_threshold
+    valid_threshold = 1 - np.clip(nan_threshold, 1e-6, 1.0 - 1e-6)
+    return valid_threshold
 
 
 def get_weights(source_coords: np.ndarray, target_coords: np.ndarray) -> np.ndarray:
@@ -278,14 +213,9 @@ def get_weights(source_coords: np.ndarray, target_coords: np.ndarray) -> np.ndar
     Returns:
         Weights, which can be used with a dot product to apply the conservative regrid.
     """
-    # TODO: better resolution/IntervalIndex inference
-    target_intervals = utils.to_intervalindex(
-        target_coords, resolution=target_coords[1] - target_coords[0]
-    )
+    target_intervals = utils.to_intervalindex(target_coords)
+    source_intervals = utils.to_intervalindex(source_coords)
 
-    source_intervals = utils.to_intervalindex(
-        source_coords, resolution=source_coords[1] - source_coords[0]
-    )
     overlap = utils.overlap(source_intervals, target_intervals)
     return utils.normalize_overlap(overlap)
 
