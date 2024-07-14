@@ -176,8 +176,8 @@ def test_attrs_dataset_conservative(sample_input_data, sample_grid_ds):
 def test_conservative_nan_aggregation_over_dims():
     """Check the behavior of valid cell aggregation across multiple dimensions.
     If we correctly accumulate the NaN count across dims, this should output 1.666,
-    vs 1.5 if we naively aggregate x then y without accumulating the NaN
-    count. Also checks the ability to handle a singleton target grid."""
+    vs 1.5 or 1.75 if we naively aggregate dimensions separatey without accumulating
+    the NaN count. Also checks the ability to handle a singleton target grid."""
     data = xr.DataArray([[1, np.nan], [2, 2]], coords={"x": [-1, 1], "y": [-1, 1]})
     target = xr.Dataset(coords={"x": [0], "y": [0]})
 

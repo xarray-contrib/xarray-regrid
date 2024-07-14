@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from typing import Callable
 
 import numpy as np
 import pandas as pd
@@ -161,7 +162,23 @@ def create_dot_dataarray(
     )
 
 
-def call_on_dataset(func, obj, *args, **kwargs):
+def common_coords(
+    data1: xr.DataArray | xr.Dataset,
+    data2: xr.DataArray | xr.Dataset,
+    remove_coord: str | None = None,
+) -> list[str]:
+    """Return a set of coords which two dataset/arrays have in common."""
+    coords = set(data1.coords).intersection(set(data2.coords))
+    if remove_coord in coords:
+        coords.remove(remove_coord)
+    return sorted([str(coord) for coord in coords])
+
+
+def call_on_dataset(
+    func: Callable, obj: xr.DataArray | xr.Dataset, *args, **kwargs
+) -> xr.DataArray | xr.Dataset:
+    """Use to call a function that expects a Dataset on either a Dataset or
+    DataArray, round-tripping to a temporary dataset."""
     placeholder_name = "_UNNAMED_ARRAY"
     if isinstance(obj, xr.DataArray):
         tmp_name = obj.name if obj.name is not None else placeholder_name

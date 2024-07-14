@@ -75,19 +75,14 @@ def conservative_regrid(
     data = data.sortby(list(coord_names))
     coords = {name: target_ds_sorted[name] for name in coord_names}
 
-    if isinstance(data, xr.Dataset):
-        regridded_data = conservative_regrid_dataset(
-            data, coords, latitude_coord, skipna, nan_threshold
-        )
-    else:
-        regridded_data = utils.call_on_dataset(
-            conservative_regrid_dataset,
-            data,
-            coords,
-            latitude_coord,
-            skipna,
-            nan_threshold,
-        )
+    regridded_data = utils.call_on_dataset(
+        conservative_regrid_dataset,
+        data,
+        coords,
+        latitude_coord,
+        skipna,
+        nan_threshold,
+    )
 
     regridded_data = regridded_data.reindex_like(target_ds, copy=False)
 
