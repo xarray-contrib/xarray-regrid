@@ -176,13 +176,17 @@ def test_attrs_dataset_conservative(sample_input_data, sample_grid_ds):
 def test_conservative_nan_aggregation_over_dims():
     """Check the behavior of valid cell aggregation across multiple dimensions.
     If we correctly accumulate the NaN count across dims, this should output 1.666,
-    vs 1.5 or 1.75 if we naively aggregate dimensions separatey without accumulating
+    vs 1.5 or 1.75 if we naively aggregate dimensions separately without accumulating
     the NaN count. Also checks the ability to handle a singleton target grid."""
     data = xr.DataArray([[1, np.nan], [2, 2]], coords={"x": [-1, 1], "y": [-1, 1]})
+    # Add a time dim and mask off a single slice to make sure we keep all possible
+    # valid points
+    data = data.expand_dims(time=[0, 1, 2], axis=0)
+    data = data.where(data.time < 2)
     target = xr.Dataset(coords={"x": [0], "y": [0]})
 
     result = data.regrid.conservative(target, skipna=True, nan_threshold=1)
-    assert np.allclose(result.mean().item(), data.mean().item())
+    assert np.allclose(result[0].mean().item(), data[0].mean().item())
 
 
 @pytest.mark.parametrize("nan_threshold", [0, 1])
@@ -216,11 +220,11 @@ def test_conservative_nan_thresholds_against_xesmf():
     ds = ds.rename(lon="longitude", lat="latitude")
     new_grid = xarray_regrid.Grid(
         north=90,
-        east=180,
+        east=360,
         south=-90,
-        west=-180,
-        resolution_lat=2.2,
-        resolution_lon=2.2,
+        west=0,
+        resolution_lat=2,
+        resolution_lon=2,
     )
     target_dataset = xarray_regrid.create_regridding_dataset(new_grid)
     regridder = xe.Regridder(ds, target_dataset, "conservative")
@@ -232,7 +236,7 @@ def test_conservative_nan_thresholds_against_xesmf():
         data_esmf = regridder(
             ds.copy(), keep_attrs=True, na_thres=nan_threshold, skipna=True
         )
-        assert (data_regrid.isnull() == data_esmf.isnull()).mean().values > 0.99
+        assert (data_regrid.isnull() == data_esmf.isnull()).mean().values > 0.995
 
 
 class TestCoordOrder:

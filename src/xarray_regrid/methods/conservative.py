@@ -121,9 +121,15 @@ def conservative_regrid_dataset(
             weights = apply_spherical_correction(weights, latitude_coord)
 
         for array in data_vars.keys():
+            non_grid_dims = [d for d in data_vars[array].dims if d not in coords]
             if coord in data_vars[array].dims:
                 data_vars[array], valid_fracs[array] = apply_weights(
-                    data_vars[array], weights, coord, valid_fracs[array], skipna
+                    data_vars[array],
+                    weights,
+                    coord,
+                    valid_fracs[array],
+                    skipna,
+                    non_grid_dims,
                 )
                 # Mask out any regridded points outside the original domain
                 data_vars[array] = data_vars[array].where(covered_grid)
@@ -154,6 +160,7 @@ def apply_weights(
     coord_name: Hashable,
     valid_frac: xr.DataArray | None,
     skipna: bool,
+    non_grid_dims: list[Hashable],
 ) -> tuple[xr.DataArray, xr.DataArray]:
     """Apply the weights to convert data to the new coordinates."""
     coord_map = {f"target_{coord_name}": coord_name}
@@ -161,13 +168,14 @@ def apply_weights(
 
     if skipna:
         notnull = da.notnull()
-        da = da.fillna(0)
+        if non_grid_dims:
+            notnull = notnull.any(non_grid_dims)
         # Renormalize the weights along this dim by the accumulated valid_frac
         # along previous dimensions
         if valid_frac is not None:
             weights_norm = weights * valid_frac / valid_frac.mean(coord_name)
 
-    da_reduced = xr.dot(da, weights_norm, dim=coord_name, optimize=True)
+    da_reduced = xr.dot(da.fillna(0), weights_norm, dim=coord_name, optimize=True)
     da_reduced = da_reduced.rename(coord_map).transpose(*da.dims)
 
     if skipna:
