@@ -50,6 +50,7 @@ dev = [
   "pytest",
   "pytest-cov",
   "pandas-stubs", # Adds typing for pandas.
+  "cftime",
 ]
 
 [tool.hatch.version]
