@@ -51,6 +51,14 @@ dev = [
   "pytest-cov",
   "pandas-stubs", # Adds typing for pandas.
 ]
+docs = [  # Required for ReadTheDocs
+  "myst_parser",
+  "sphinx",
+  "myst-nb",
+  "sphinx_rtd_theme",
+  "sphinx-autoapi",
+  "coverage[toml]",
+]
 
 [tool.hatch.version]
 path = "src/xarray_regrid/__about__.py"
@@ -70,9 +78,20 @@ coverage = [
   "pytest --cov --cov-report term --cov-report xml --junitxml=xunit-result.xml tests/",
 ]
 
+[tool.hatch.envs.docs]
+features = ["docs"]
+
+[tool.hatch.envs.docs.scripts]
+build = ["(cd docs && make html)"]
+
+
+
 [tool.ruff]
 target-version = "py310"
 line-length = 88
+exclude = [
+  "docs",
+]
 
 [tool.ruff.lint]
 select = [
