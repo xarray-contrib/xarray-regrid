@@ -61,7 +61,7 @@ docs = [  # Required for ReadTheDocs
 ]
 
 [tool.hatch.version]
-path = "src/xarray_regrid/__about__.py"
+path = "src/xarray_regrid/__init__.py"
 
 [tool.hatch.envs.default]
 features = ["dev", "benchmarking"]
