@@ -49,6 +49,7 @@ dev = [
   "mypy",
   "pytest",
   "pytest-cov",
+  "cftime",  # required for decode time of test netCDF files
   "pandas-stubs", # Adds typing for pandas.
 ]
 docs = [  # Required for ReadTheDocs
