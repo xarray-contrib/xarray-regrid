@@ -1,4 +1,5 @@
 """Conservative regridding implementation."""
+
 from collections.abc import Hashable
 from typing import overload
 
@@ -14,8 +15,7 @@ def conservative_regrid(
     data: xr.DataArray,
     target_ds: xr.Dataset,
     latitude_coord: str | None,
-) -> xr.DataArray:
-    ...
+) -> xr.DataArray: ...
 
 
 @overload
@@ -23,8 +23,7 @@ def conservative_regrid(
     data: xr.Dataset,
     target_ds: xr.Dataset,
     latitude_coord: str | None,
-) -> xr.Dataset:
-    ...
+) -> xr.Dataset: ...
 
 
 def conservative_regrid(

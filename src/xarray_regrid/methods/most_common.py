@@ -19,8 +19,7 @@ def most_common_wrapper(
     target_ds: xr.Dataset,
     time_dim: str = "",
     max_mem: int | None = None,
-) -> xr.DataArray:
-    ...
+) -> xr.DataArray: ...
 
 
 @overload
@@ -29,8 +28,7 @@ def most_common_wrapper(
     target_ds: xr.Dataset,
     time_dim: str = "",
     max_mem: int | None = None,
-) -> xr.Dataset:
-    ...
+) -> xr.Dataset: ...
 
 
 def most_common_wrapper(
