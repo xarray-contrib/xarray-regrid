@@ -5,8 +5,7 @@ import pandas as pd
 import xarray as xr
 
 
-class InvalidBoundsError(Exception):
-    ...
+class InvalidBoundsError(Exception): ...
 
 
 @dataclass

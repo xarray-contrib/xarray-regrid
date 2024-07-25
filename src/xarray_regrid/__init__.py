@@ -8,3 +8,5 @@ __all__ = [
     "create_regridding_dataset",
     "methods",
 ]
+
+__version__ = "0.2.3"
