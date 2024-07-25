@@ -6,6 +6,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## Unreleased
 
+Added:
+ - Documentation for the package, including readthedocs integration ([#40](https://github.com/EXCITED-CO2/xarray-regrid/pull/40)).
 
 ## v0.2.3 (2024-02-29)
 
