@@ -1,3 +1,9 @@
+.. toctree::
+  :maxdepth: 3
+  :hidden:
+
+  self
+
 
 .. toctree::
   :maxdepth: 3
@@ -27,13 +33,15 @@ Overview
 
 The following methods are supported:
 
-* Linear
-* Nearest-neighbor
-* Conservative
-* Cubic
-* "Most common value" (zonal statistics)
+* `Linear <autoapi/xarray_regrid/regrid/index.html#xarray_regrid.regrid.Regridder.linear>`_
+* `Nearest-neighbor <autoapi/xarray_regrid/regrid/index.html#xarray_regrid.regrid.Regridder.nearest>`_
+* `Conservative <autoapi/xarray_regrid/regrid/index.html#xarray_regrid.regrid.Regridder.conservative>`_
+* `Cubic <autoapi/xarray_regrid/regrid/index.html#xarray_regrid.regrid.Regridder.cubic>`_
+* `"Most common value" (zonal statistics) <autoapi/xarray_regrid/regrid/index.html#xarray_regrid.regrid.Regridder.most_common>`_
 
 Note that "Most common value" is designed to regrid categorical data to a coarse resolution. For regridding categorical data to a finer resolution, please use "nearest-neighbor" regridder.
+
+For usage examples, please refer to the `quickstart guide <getting_started>`_ and the `example notebooks <notebooks/index>`_.
 
 Installing
 ==========
