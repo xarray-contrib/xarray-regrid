@@ -1,13 +1,13 @@
 from collections.abc import Callable
 from dataclasses import dataclass
+from typing import Any, overload
 
 import numpy as np
 import pandas as pd
 import xarray as xr
 
 
-class InvalidBoundsError(Exception):
-    ...
+class InvalidBoundsError(Exception): ...
 
 
 @dataclass
@@ -174,8 +174,29 @@ def common_coords(
     return sorted([str(coord) for coord in coords])
 
 
+@overload
 def call_on_dataset(
-    func: Callable, obj: xr.DataArray | xr.Dataset, *args, **kwargs
+    func: Callable[..., xr.Dataset],
+    obj: xr.DataArray,
+    *args: Any,
+    **kwargs: Any,
+) -> xr.DataArray: ...
+
+
+@overload
+def call_on_dataset(
+    func: Callable[..., xr.Dataset],
+    obj: xr.Dataset,
+    *args: Any,
+    **kwargs: Any,
+) -> xr.Dataset: ...
+
+
+def call_on_dataset(
+    func: Callable[..., xr.Dataset],
+    obj: xr.DataArray | xr.Dataset,
+    *args: Any,
+    **kwargs: Any,
 ) -> xr.DataArray | xr.Dataset:
     """Use to call a function that expects a Dataset on either a Dataset or
     DataArray, round-tripping to a temporary dataset."""
