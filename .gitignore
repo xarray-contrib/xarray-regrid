@@ -18,6 +18,7 @@ coverage.xml
 .tox
 
 docs/_build
+docs/generated
 
 # ide
 .idea

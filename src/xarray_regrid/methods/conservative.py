@@ -1,4 +1,5 @@
 """Conservative regridding implementation."""
+
 from collections.abc import Hashable
 from typing import overload
 

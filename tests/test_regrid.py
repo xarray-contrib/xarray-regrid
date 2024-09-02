@@ -8,7 +8,7 @@ from numpy.testing import assert_array_equal
 
 import xarray_regrid
 
-DATA_PATH = Path(__file__).parent.parent / "benchmarks" / "data"
+DATA_PATH = Path(__file__).parent.parent / "docs" / "notebooks" / "benchmarks" / "data"
 
 CDO_DATA = {
     "linear": DATA_PATH / "cdo_bilinear_64b.nc",

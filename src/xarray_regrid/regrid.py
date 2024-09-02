@@ -6,7 +6,7 @@ from xarray_regrid.methods import conservative, interp, most_common
 @xr.register_dataarray_accessor("regrid")
 @xr.register_dataset_accessor("regrid")
 class Regridder:
-    """Regridding xarray dataarrays.
+    """Regridding xarray datasets and dataarrays.
 
     Available methods:
         linear: linear, bilinear, or higher dimensional linear interpolation.
