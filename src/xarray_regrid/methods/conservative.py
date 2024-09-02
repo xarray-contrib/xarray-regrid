@@ -16,8 +16,7 @@ def conservative_regrid(
     latitude_coord: str | None,
     skipna: bool = True,
     nan_threshold: float = 1.0,
-) -> xr.DataArray:
-    ...
+) -> xr.DataArray: ...
 
 
 @overload
@@ -27,8 +26,7 @@ def conservative_regrid(
     latitude_coord: str | None,
     skipna: bool = True,
     nan_threshold: float = 1.0,
-) -> xr.Dataset:
-    ...
+) -> xr.Dataset: ...
 
 
 def conservative_regrid(
@@ -216,9 +214,7 @@ def apply_weights(
 
         else:
             # Update the valid points on this dimension
-            valid_frac = xr.dot(
-                valid_frac, weights, dim=coord_name, optimize=True
-            )
+            valid_frac = xr.dot(valid_frac, weights, dim=coord_name, optimize=True)
             valid_frac = valid_frac.rename(coord_map)  # type: ignore
             valid_frac = valid_frac.clip(0, 1)
 
