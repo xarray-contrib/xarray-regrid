@@ -214,7 +214,7 @@ def test_conservative_nan_thresholds_against_coarsen(nan_threshold):
 
 def xesmf_available() -> bool:
     try:
-        import xesmf
+        import xesmf  # noqa: F401
     except ImportError:
         return False
     return True
