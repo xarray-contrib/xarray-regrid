@@ -8,6 +8,8 @@ import xarray as xr
 
 from xarray_regrid import utils
 
+EMPTY_DA_NAME = "FRAC_EMPTY"
+
 
 @overload
 def conservative_regrid(
@@ -49,7 +51,7 @@ def conservative_regrid(
         data: Input dataset.
         target_ds: Dataset which coordinates the input dataset should be regrid to.
         latitude_coord: Name of the latitude coordinate. If not provided, attempt to
-            infer it from the first coordinate containing the string 'lat'.
+            infer it from the first coordinate equaling the string 'lat' or 'latitude'.
         skipna: If True, enable handling for NaN values. This adds some overhead,
             so should be disabled for optimal performance on data without NaNs.
         nan_threshold: Threshold value that will retain any output points containing
@@ -64,7 +66,7 @@ def conservative_regrid(
     # Attempt to infer the latitude coordinate
     if latitude_coord is None:
         for coord in data.coords:
-            if str(coord).lower().startswith("lat"):
+            if str(coord).lower() in ["lat", "latitude"]:
                 latitude_coord = coord
                 break
 
@@ -98,7 +100,7 @@ def conservative_regrid_dataset(
     """Dataset implementation of the conservative regridding method."""
     data_vars = dict(data.data_vars)
     data_coords = dict(data.coords)
-    valid_fracs = {v: xr.DataArray() for v in data_vars}
+    valid_fracs = {v: xr.DataArray(name=EMPTY_DA_NAME) for v in data_vars}
     data_attrs = {v: data_vars[v].attrs for v in data_vars}
     coord_attrs = {c: data_coords[c].attrs for c in data_coords}
     ds_attrs = data.attrs
@@ -153,7 +155,6 @@ def conservative_regrid_dataset(
     return ds_regridded
 
 
-@overload
 def apply_weights(
     da: xr.DataArray,
     weights: xr.DataArray,
@@ -161,28 +162,7 @@ def apply_weights(
     valid_frac: xr.DataArray,
     skipna: bool,
     non_grid_dims: list[Hashable],
-) -> tuple[xr.DataArray, xr.DataArray]: ...
-
-
-@overload
-def apply_weights(
-    da: xr.DataArray,
-    weights: xr.DataArray,
-    coord: Hashable,
-    valid_frac: None,
-    skipna: bool,
-    non_grid_dims: list[Hashable],
-) -> tuple[xr.DataArray, None]: ...
-
-
-def apply_weights(
-    da: xr.DataArray,
-    weights: xr.DataArray,
-    coord: Hashable,
-    valid_frac: xr.DataArray | None,
-    skipna: bool,
-    non_grid_dims: list[Hashable],
-) -> tuple[xr.DataArray, xr.DataArray | None]:
+) -> tuple[xr.DataArray, xr.DataArray]:
     """Apply the weights to convert data to the new coordinates."""
     coord_map = {f"target_{coord}": coord}
     weights_norm = weights.copy()
@@ -193,7 +173,7 @@ def apply_weights(
             notnull = notnull.any(non_grid_dims)
         # Renormalize the weights along this dim by the accumulated valid_frac
         # along previous dimensions
-        if valid_frac is not None:
+        if valid_frac.name != EMPTY_DA_NAME:
             weights_norm = weights * valid_frac / valid_frac.mean(dim=[coord])
 
     da_reduced: xr.DataArray = xr.dot(
@@ -208,14 +188,14 @@ def apply_weights(
         weights_valid_sum = weights_valid_sum.rename(coord_map)
         da_reduced /= weights_valid_sum.clip(1e-6, None)
 
-        if valid_frac is None:
+        if valid_frac.name == EMPTY_DA_NAME:
             # Begin tracking the valid fraction
             valid_frac = weights_valid_sum
 
         else:
             # Update the valid points on this dimension
             valid_frac = xr.dot(valid_frac, weights, dim=[coord], optimize=True)
-            valid_frac = valid_frac.rename(coord_map)  # type: ignore
+            valid_frac = valid_frac.rename(coord_map)
             valid_frac = valid_frac.clip(0, 1)
 
     return da_reduced, valid_frac
