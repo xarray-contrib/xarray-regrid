@@ -42,6 +42,9 @@ Source = "https://github.com/EXCITED-CO2/xarray-regrid"
 benchmarking = [
   "dask[distributed]",
   "matplotlib",
+  "zarr",
+  "requests",
+  "aiohttp",
 ]
 dev = [
   "hatch",
