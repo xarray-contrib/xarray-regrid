@@ -38,6 +38,25 @@ class Grid:
         if msg is not None:
             raise InvalidBoundsError(msg)
 
+    def create_regridding_dataset(
+        self, lat_name: str = "latitude", lon_name: str = "longitude"
+    ) -> xr.Dataset:
+        """Create a dataset to use for regridding.
+
+        Args:
+            grid: Grid object containing the bounds and resolution of the
+                cartesian grid.
+            lat_name: Name for the latitudinal coordinate and dimension.
+                Defaults to "latitude".
+            lon_name: Name for the longitudinal coordinate and dimension.
+                Defaults to "longitude".
+
+        Returns:
+            A dataset with the latitude and longitude coordinates corresponding to the
+                specified grid. Contains no data variables.
+        """
+        return create_regridding_dataset(self, lat_name, lon_name)
+
 
 def create_lat_lon_coords(grid: Grid) -> tuple[np.ndarray, np.ndarray]:
     """Create latitude and longitude coordinates based on the provided grid parameters.
