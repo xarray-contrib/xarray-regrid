@@ -212,7 +212,15 @@ def test_conservative_nan_thresholds_against_coarsen(nan_threshold):
     xr.testing.assert_allclose(da_coarsen, da_regrid)
 
 
-@pytest.mark.skip(reason="requires xesmf")
+def xesmf_available() -> bool:
+    try:
+        import xesmf
+    except ImportError:
+        return False
+    return True
+
+
+@pytest.mark.skipif(not xesmf_available(), reason="xesmf required")
 def test_conservative_nan_thresholds_against_xesmf():
     import xesmf as xe
 
