@@ -2,6 +2,7 @@
 
 <img align="right" width="100" alt="Logo" src="./docs/assets/logo.png">
 
+
 With xarray-regrid it is possible to regrid between two rectilinear grids. The following methods are supported:
  - Linear
  - Nearest-neighbor
@@ -11,7 +12,13 @@ With xarray-regrid it is possible to regrid between two rectilinear grids. The f
 
 Note that "Most common value" is designed to regrid categorical data to a coarse resolution. For regridding categorical data to a finer resolution, please use "nearest-neighbor" regridder.
 
+[![PyPI](https://img.shields.io/pypi/v/xarray-regrid.svg?style=flat)](https://pypi.python.org/pypi/xarray-regrid/)
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.10203304.svg)](https://doi.org/10.5281/zenodo.10203304)
+[![Docs](https://readthedocs.org/projects/xarray-regrid/badge/?version=latest&style=flat)](https://xarray-regrid.readthedocs.org/)
+
+## Why xarray-regrid?
+
+Regridding is a common operation in earth science and other fields. While xarray does have some interpolation methods available, these are not always straightforward to use. Additionally, methods such as conservative regridding, or taking the most common value, are not available in xarray.
 
 ## Installation
 
