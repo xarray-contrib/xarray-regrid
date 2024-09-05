@@ -6,8 +6,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## Unreleased
 
+# 0.3.0 (2024-09-05)
+
 New contributors:
- - @slevang
+ - [@slevang](https://github.com/slevang)
 
 Fixed:
  - conservative regridding now can be constructed fully lazily [#39](https://github.com/EXCITED-CO2/xarray-regrid/pull/39).
@@ -20,7 +22,7 @@ Added:
 ## v0.2.3 (2024-02-29)
 
 New contributors:
- - @kjdoore
+ - [@kjdoore](https://github.com/kjdoore)
 
 Fixed:
  - Ensure all attributes are kept upon regridding (dataset, variable and coordinate attrs) ([#27](https://github.com/EXCITED-CO2/xarray-regrid/pull/27)).
