@@ -10,6 +10,8 @@ With xarray-regrid it is possible to regrid between two rectilinear grids. The f
  - Cubic
  - "Most common value" (zonal statistics)
 
+All regridding methods, except for the "most common value" can operate lazily on [Dask arrays](https://docs.xarray.dev/en/latest/user-guide/dask.html).
+
 Note that "Most common value" is designed to regrid categorical data to a coarse resolution. For regridding categorical data to a finer resolution, please use "nearest-neighbor" regridder.
 
 [![PyPI](https://img.shields.io/pypi/v/xarray-regrid.svg?style=flat)](https://pypi.python.org/pypi/xarray-regrid/)
