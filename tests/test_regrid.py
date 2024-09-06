@@ -27,20 +27,22 @@ N_TIMESTAMPS = 1
 @pytest.fixture(scope="session")
 def sample_input_data() -> xr.Dataset:
     ds = xr.open_dataset(DATA_PATH / "era5_2m_dewpoint_temperature_2000_monthly.nc")
-    return ds.isel(time=slice(0, N_TIMESTAMPS)).persist()
+    # slice after compute due to current xarray bug: https://github.com/pydata/xarray/issues/8909
+    # then convert to dask so regridding is lazy on attribute tests
+    return ds.compute().isel(time=slice(0, N_TIMESTAMPS)).chunk()
 
 
 @pytest.fixture(scope="session")
 def conservative_input_data() -> xr.Dataset:
     ds = xr.open_dataset(DATA_PATH / "era5_total_precipitation_2020_monthly.nc")
-    return ds.isel(time=slice(0, N_TIMESTAMPS)).persist()
+    return ds.compute().isel(time=slice(0, N_TIMESTAMPS)).chunk()
 
 
 @pytest.fixture(scope="session")
 def cdo_comparison_data() -> dict[str, xr.Dataset]:
     data = {}
     for method, path in CDO_FILES.items():
-        data[method] = xr.open_dataset(path).isel(time=slice(0, N_TIMESTAMPS)).persist()
+        data[method] = xr.open_dataset(path).compute().isel(time=slice(0, N_TIMESTAMPS))
     return data
 
 
@@ -203,7 +205,7 @@ def test_conservative_nan_thresholds_against_coarsen(nan_threshold):
 
 @pytest.mark.skipif(xesmf is None, reason="xesmf required")
 def test_conservative_nan_thresholds_against_xesmf():
-    ds = xr.tutorial.open_dataset("ersstv5").sst.isel(time=[0]).persist()
+    ds = xr.tutorial.open_dataset("ersstv5").sst.compute().isel(time=[0])
     ds = ds.rename(lon="longitude", lat="latitude")
     new_grid = xarray_regrid.Grid(
         north=90,
