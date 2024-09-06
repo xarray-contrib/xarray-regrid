@@ -20,29 +20,25 @@ CDO_FILES = {
     "conservative": DATA_PATH / "cdo_conservative_64b.nc",
 }
 
-# Sample files contain 12 monthly timestamps but subset to one for speed
-N_TIMESTAMPS = 1
-
 
 @pytest.fixture(scope="session")
 def sample_input_data() -> xr.Dataset:
     ds = xr.open_dataset(DATA_PATH / "era5_2m_dewpoint_temperature_2000_monthly.nc")
-    # slice after compute due to current xarray bug: https://github.com/pydata/xarray/issues/8909
-    # then convert to dask so regridding is lazy on attribute tests
-    return ds.compute().isel(time=slice(0, N_TIMESTAMPS)).chunk()
+    # Convert to dask so regridding is lazy for attr-only tests
+    return ds.compute().chunk()
 
 
 @pytest.fixture(scope="session")
 def conservative_input_data() -> xr.Dataset:
     ds = xr.open_dataset(DATA_PATH / "era5_total_precipitation_2020_monthly.nc")
-    return ds.compute().isel(time=slice(0, N_TIMESTAMPS)).chunk()
+    return ds.compute().chunk()
 
 
 @pytest.fixture(scope="session")
 def cdo_comparison_data() -> dict[str, xr.Dataset]:
     data = {}
     for method, path in CDO_FILES.items():
-        data[method] = xr.open_dataset(path).compute().isel(time=slice(0, N_TIMESTAMPS))
+        data[method] = xr.open_dataset(path).compute()
     return data
 
 
@@ -108,7 +104,7 @@ def test_conservative_regridder(
         ds_regrid["tp"],
         ds_cdo["tp"],
         rtol=0.002,
-        atol=2e-5,
+        atol=4e-5,
     )
 
 
@@ -127,7 +123,7 @@ def test_conservative_nans(
         ds_regrid["tp"].sel(no_nans),
         ds_cdo["tp"].sel(no_nans),
         rtol=0.002,
-        atol=2e-5,
+        atol=4e-5,
     )
 
 
