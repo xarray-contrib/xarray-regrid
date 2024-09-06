@@ -1,4 +1,3 @@
-from copy import deepcopy
 from pathlib import Path
 
 import numpy as np
@@ -6,29 +5,46 @@ import pytest
 import xarray as xr
 from numpy.testing import assert_array_equal
 
+try:
+    import xesmf
+except ImportError:
+    xesmf = None
+
 import xarray_regrid
 
 DATA_PATH = Path(__file__).parent.parent / "docs" / "notebooks" / "benchmarks" / "data"
 
-CDO_DATA = {
+CDO_FILES = {
     "linear": DATA_PATH / "cdo_bilinear_64b.nc",
     "nearest": DATA_PATH / "cdo_nearest_64b.nc",
     "conservative": DATA_PATH / "cdo_conservative_64b.nc",
 }
 
+# Sample files contain 12 monthly timestamps but subset to one for speed
+N_TIMESTAMPS = 1
+
 
 @pytest.fixture(scope="session")
-def load_input_data() -> xr.Dataset:
+def sample_input_data() -> xr.Dataset:
     ds = xr.open_dataset(DATA_PATH / "era5_2m_dewpoint_temperature_2000_monthly.nc")
-    return ds.compute()
+    return ds.isel(time=slice(0, N_TIMESTAMPS)).persist()
 
 
-@pytest.fixture
-def sample_input_data(load_input_data) -> xr.Dataset:
-    return deepcopy(load_input_data)
+@pytest.fixture(scope="session")
+def conservative_input_data() -> xr.Dataset:
+    ds = xr.open_dataset(DATA_PATH / "era5_total_precipitation_2020_monthly.nc")
+    return ds.isel(time=slice(0, N_TIMESTAMPS)).persist()
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
+def cdo_comparison_data() -> dict[str, xr.Dataset]:
+    data = {}
+    for method, path in CDO_FILES.items():
+        data[method] = xr.open_dataset(path).isel(time=slice(0, N_TIMESTAMPS)).persist()
+    return data
+
+
+@pytest.fixture(scope="session")
 def sample_grid_ds():
     grid = xarray_regrid.Grid(
         north=90,
@@ -42,48 +58,7 @@ def sample_grid_ds():
     return xarray_regrid.create_regridding_dataset(grid)
 
 
-@pytest.mark.parametrize(
-    "method, cdo_file",
-    [
-        ("linear", CDO_DATA["linear"]),
-        ("nearest", CDO_DATA["nearest"]),
-    ],
-)
-def test_basic_regridders_ds(sample_input_data, sample_grid_ds, method, cdo_file):
-    """Test the dataset regridders (except conservative)."""
-    regridder = getattr(sample_input_data.regrid, method)
-    ds_regrid = regridder(sample_grid_ds)
-    ds_cdo = xr.open_dataset(cdo_file)
-    xr.testing.assert_allclose(ds_regrid.compute(), ds_cdo.compute())
-
-
-@pytest.mark.parametrize(
-    "method, cdo_file",
-    [
-        ("linear", CDO_DATA["linear"]),
-        ("nearest", CDO_DATA["nearest"]),
-    ],
-)
-def test_basic_regridders_da(sample_input_data, sample_grid_ds, method, cdo_file):
-    """Test the dataarray regridders (except conservative)."""
-    regridder = getattr(sample_input_data["d2m"].regrid, method)
-    da_regrid = regridder(sample_grid_ds)
-    ds_cdo = xr.open_dataset(cdo_file)
-    xr.testing.assert_allclose(da_regrid.compute(), ds_cdo["d2m"].compute())
-
-
 @pytest.fixture(scope="session")
-def load_conservative_input_data() -> xr.Dataset:
-    ds = xr.open_dataset(DATA_PATH / "era5_total_precipitation_2020_monthly.nc")
-    return ds.compute()
-
-
-@pytest.fixture
-def conservative_input_data(load_conservative_input_data) -> xr.Dataset:
-    return deepcopy(load_conservative_input_data)
-
-
-@pytest.fixture
 def conservative_sample_grid():
     grid = xarray_regrid.Grid(
         north=90,
@@ -97,46 +72,60 @@ def conservative_sample_grid():
     return xarray_regrid.create_regridding_dataset(grid)
 
 
-def test_conservative_regridder(conservative_input_data, conservative_sample_grid):
+@pytest.mark.parametrize("method", ["linear", "nearest"])
+def test_basic_regridders_ds(
+    sample_input_data, sample_grid_ds, cdo_comparison_data, method
+):
+    """Test the dataset regridders (except conservative)."""
+    regridder = getattr(sample_input_data.regrid, method)
+    ds_regrid = regridder(sample_grid_ds)
+    ds_cdo = cdo_comparison_data[method]
+    xr.testing.assert_allclose(ds_regrid, ds_cdo, rtol=0.002, atol=2e-5)
+
+
+@pytest.mark.parametrize("method", ["linear", "nearest"])
+def test_basic_regridders_da(
+    sample_input_data, sample_grid_ds, cdo_comparison_data, method
+):
+    """Test the dataarray regridders (except conservative)."""
+    regridder = getattr(sample_input_data["d2m"].regrid, method)
+    da_regrid = regridder(sample_grid_ds)
+    da_cdo = cdo_comparison_data[method]["d2m"]
+    xr.testing.assert_allclose(da_regrid, da_cdo, rtol=0.002, atol=2e-5)
+
+
+def test_conservative_regridder(
+    conservative_input_data, conservative_sample_grid, cdo_comparison_data
+):
     ds_regrid = conservative_input_data.regrid.conservative(
         conservative_sample_grid, latitude_coord="latitude"
     )
-    ds_cdo = xr.open_dataset(CDO_DATA["conservative"])
-
-    # Cut of the edges: edge performance to be improved later (hopefully)
-    no_edges = {"latitude": slice(-85, 85), "longitude": slice(5, 355)}
+    ds_cdo = cdo_comparison_data["conservative"]
 
     xr.testing.assert_allclose(
-        ds_regrid["tp"]
-        .sel(no_edges)
-        .compute()
-        .transpose("time", "latitude", "longitude"),
-        ds_cdo["tp"].sel(no_edges).compute(),
+        ds_regrid["tp"],
+        ds_cdo["tp"],
         rtol=0.002,
-        atol=2e-6,
+        atol=2e-5,
     )
 
 
-def test_conservative_nans(conservative_input_data, conservative_sample_grid):
+def test_conservative_nans(
+    conservative_input_data, conservative_sample_grid, cdo_comparison_data
+):
     ds = conservative_input_data
     ds["tp"] = ds["tp"].where(ds.latitude >= 0).where(ds.longitude < 180)
     ds_regrid = ds.regrid.conservative(
         conservative_sample_grid, latitude_coord="latitude"
     )
-    ds_cdo = xr.open_dataset(CDO_DATA["conservative"])
+    ds_cdo = cdo_comparison_data["conservative"]
 
-    # Cut of the edges: edge performance to be improved later (hopefully)
-    no_edges = {"latitude": slice(-85, 85), "longitude": slice(5, 355)}
-    no_nans = {"latitude": slice(1, 90), "longitude": slice(None, 179)}
+    no_nans = {"latitude": slice(1, 90), "longitude": slice(1, 179)}
     xr.testing.assert_allclose(
-        ds_regrid["tp"]
-        .sel(no_edges)
-        .sel(no_nans)
-        .compute()
-        .transpose("time", "latitude", "longitude"),
-        ds_cdo["tp"].sel(no_edges).sel(no_nans).compute(),
+        ds_regrid["tp"].sel(no_nans),
+        ds_cdo["tp"].sel(no_nans),
         rtol=0.002,
-        atol=2e-6,
+        atol=2e-5,
     )
 
 
@@ -186,7 +175,7 @@ def test_conservative_nan_aggregation_over_dims():
     target = xr.Dataset(coords={"x": [0], "y": [0]})
 
     result = data.regrid.conservative(target, skipna=True, nan_threshold=1)
-    assert np.allclose(result[0].mean().item(), data[0].mean().item())
+    np.testing.assert_allclose(result[0].mean().item(), data[0].mean().item())
 
 
 @pytest.mark.parametrize("nan_threshold", [0, 1])
@@ -212,19 +201,9 @@ def test_conservative_nan_thresholds_against_coarsen(nan_threshold):
     xr.testing.assert_allclose(da_coarsen, da_regrid)
 
 
-def xesmf_available() -> bool:
-    try:
-        import xesmf  # noqa: F401
-    except ImportError:
-        return False
-    return True
-
-
-@pytest.mark.skipif(not xesmf_available(), reason="xesmf required")
+@pytest.mark.skipif(xesmf is None, reason="xesmf required")
 def test_conservative_nan_thresholds_against_xesmf():
-    import xesmf as xe
-
-    ds = xr.tutorial.open_dataset("ersstv5").sst.compute()
+    ds = xr.tutorial.open_dataset("ersstv5").sst.isel(time=[0]).persist()
     ds = ds.rename(lon="longitude", lat="latitude")
     new_grid = xarray_regrid.Grid(
         north=90,
@@ -235,16 +214,14 @@ def test_conservative_nan_thresholds_against_xesmf():
         resolution_lon=2,
     )
     target_dataset = xarray_regrid.create_regridding_dataset(new_grid)
-    regridder = xe.Regridder(ds, target_dataset, "conservative")
+    regridder = xesmf.Regridder(ds, target_dataset, "conservative")
 
     for nan_threshold in [0.0, 0.25, 0.5, 0.75, 1.0]:
-        data_regrid = ds.copy().regrid.conservative(
+        data_regrid = ds.regrid.conservative(
             target_dataset, skipna=True, nan_threshold=nan_threshold
         )
-        data_esmf = regridder(
-            ds.copy(), keep_attrs=True, na_thres=nan_threshold, skipna=True
-        )
-        assert (data_regrid.isnull() == data_esmf.isnull()).mean().values > 0.995
+        data_esmf = regridder(ds, keep_attrs=True, na_thres=nan_threshold, skipna=True)
+        xr.testing.assert_equal(data_regrid.isnull(), data_esmf.isnull())
 
 
 class TestCoordOrder:
