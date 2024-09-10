@@ -34,5 +34,5 @@ Multiple regridding methods are available:
 * `conservative regridding <autoapi/xarray_regrid/regrid/index.html#xarray_regrid.regrid.Regridder.conservative>`_ (``.regrid.conservative``)
 
 Additionally, a zonal statistics `method to compute the most common value <autoapi/xarray_regrid/regrid/index.html#xarray_regrid.regrid.Regridder.most_common>`_
-is available (``.regrid.most_common``).
+is available for DataArrays (``.regrid.most_common``).
 This can be used to upscale very fine categorical data to a more course resolution.

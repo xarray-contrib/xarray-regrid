@@ -1,6 +1,7 @@
+import numpy as np
 import xarray as xr
 
-from xarray_regrid.methods import conservative, interp, most_common
+from xarray_regrid.methods import conservative, flox_reduce, interp
 
 
 @xr.register_dataarray_accessor("regrid")
@@ -111,9 +112,10 @@ class Regridder:
     def most_common(
         self,
         ds_target_grid: xr.Dataset,
+        expected_groups: np.ndarray,
         time_dim: str = "time",
-        max_mem: int = int(1e9),
-    ) -> xr.DataArray | xr.Dataset:
+        inverse: bool = False,
+    ) -> xr.DataArray:
         """Regrid by taking the most common value within the new grid cells.
 
         To be used for regridding data to a much coarser resolution, not for regridding
@@ -125,17 +127,33 @@ class Regridder:
 
         Args:
             ds_target_grid: Target grid dataset
-            time_dim: Name of the time dimension. Defaults to "time".
-            max_mem: (Approximate) maximum memory in bytes that the regridding routine
-                can use. Note that this is not the total memory consumption and does not
-                include the size of the final dataset. Defaults to 1e9 (1 GB).
+            expected_groups: Numpy array containing all labels expected to be in the
+                input data. For example, `np.array([0, 2, 4])`, if the data only
+                contains the values 0, 2 and 4.
+            time_dim: Name of the time dimension. Defaults to "time". Use `None` to
+                force regridding over the time dimension.
+            inverse: Find the least-common-value (anti-mode).
 
         Returns:
             Regridded data.
         """
         ds_target_grid = validate_input(self._obj, ds_target_grid, time_dim)
-        return most_common.most_common_wrapper(
-            self._obj, ds_target_grid, time_dim, max_mem
+
+        if isinstance(self._obj, xr.Dataset):
+            msg = (
+                "The 'most common value' regridder is not implemented for\n",
+                "xarray.Dataset, as it requires specifying the expected labels.\n"
+                "Please select only a single variable (as DataArray),\n"
+                " and regrid it separately.",
+            )
+            raise ValueError(msg)
+
+        return flox_reduce.get_most_common_value(
+            self._obj,
+            ds_target_grid,
+            expected_groups,
+            time_dim,
+            inverse,
         )
 
 
