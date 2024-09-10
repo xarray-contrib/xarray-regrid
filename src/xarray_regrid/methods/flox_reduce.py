@@ -1,5 +1,7 @@
 """Implementation of flox reduction based regridding methods."""
 
+from typing import overload
+
 import flox.xarray
 import numpy as np
 import pandas as pd
@@ -13,13 +15,33 @@ from xarray_regrid.methods._shared import (
 )
 
 
+@overload
+def statistic_reduce(
+    data: xr.DataArray,
+    target_ds: xr.Dataset,
+    time_dim: str | None,
+    method: str,
+    skipna: bool = False,
+) -> xr.DataArray: ...
+
+
+@overload
 def statistic_reduce(
     data: xr.Dataset,
     target_ds: xr.Dataset,
-    time_dim: str,
+    time_dim: str | None,
     method: str,
     skipna: bool = False,
-) -> xr.Dataset:
+) -> xr.Dataset: ...
+
+
+def statistic_reduce(
+    data: xr.DataArray | xr.Dataset,
+    target_ds: xr.Dataset,
+    time_dim: str | None,
+    method: str,
+    skipna: bool = False,
+) -> xr.DataArray | xr.Dataset:
     """Upsampling of data using statistical methods (e.g. the mean or variance).
 
     We use flox Aggregations to perform a "groupby" over multiple dimensions, which we
@@ -31,13 +53,14 @@ def statistic_reduce(
         target_ds: Dataset which coordinates the input dataset should be regrid to.
         time_dim: Name of the time dimension. Defaults to "time". Use `None` to force
             regridding over the time dimension.
-        method: One of the following reduction methods: "sum", "mean", "var", "std".
+        method: One of the following reduction methods: "sum", "mean", "var", "std",
+            or "median.
         skipna: If NaN values should be ignored.
 
     Returns:
         xarray.dataset with regridded land cover categorical data.
     """
-    valid_methods = ["sum", "mean", "var", "std"]
+    valid_methods = ["sum", "mean", "var", "std", "median"]
     if method not in valid_methods:
         msg = f"Invalid method. Please choose from '{valid_methods}'."
         raise ValueError(msg)
@@ -46,19 +69,25 @@ def statistic_reduce(
         method = "nan" + method
 
     coords = utils.common_coords(data, target_ds, remove_coord=time_dim)
+    target_ds_sorted = target_ds.sortby(list(coords))
 
-    bounds = tuple(construct_intervals(target_ds[coord].to_numpy()) for coord in coords)
+    bounds = tuple(
+        construct_intervals(target_ds_sorted[coord].to_numpy()) for coord in coords
+    )
 
-    data = reduce_data_to_new_domain(data, target_ds, coords)
+    data = reduce_data_to_new_domain(data, target_ds_sorted, coords)
 
     result: xr.Dataset = flox.xarray.xarray_reduce(
         data.compute(),
         *coords,
         func=method,
         expected_groups=bounds,
+        skipna=skipna,
     )
 
-    return restore_properties(result, data, target_ds, coords)
+    result = restore_properties(result, data, target_ds_sorted, coords)
+    result = result.reindex_like(target_ds, copy=False)
+    return result
 
 
 def find_matching_int_dtype(
@@ -84,7 +113,7 @@ def get_most_common_value(
     data: xr.DataArray,
     target_ds: xr.Dataset,
     expected_groups: np.ndarray,
-    time_dim: str | None = "time",
+    time_dim: str | None,
     inverse: bool = False,
 ) -> xr.DataArray:
     """Upsample the input data using a "most common label" (mode) approach.

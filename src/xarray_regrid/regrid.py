@@ -23,13 +23,14 @@ class Regridder:
     def linear(
         self,
         ds_target_grid: xr.Dataset,
-        time_dim: str = "time",
+        time_dim: str | None = "time",
     ) -> xr.DataArray | xr.Dataset:
         """Regrid to the coords of the target dataset with linear interpolation.
 
         Args:
             ds_target_grid: Dataset containing the target coordinates.
-            time_dim: The name of the time dimension/coordinate
+            time_dim: Name of the time dimension. Defaults to "time". Use `None` to
+                force regridding over the time dimension.
 
         Returns:
             Data regridded to the target dataset coordinates.
@@ -40,13 +41,14 @@ class Regridder:
     def nearest(
         self,
         ds_target_grid: xr.Dataset,
-        time_dim: str = "time",
+        time_dim: str | None = "time",
     ) -> xr.DataArray | xr.Dataset:
         """Regrid to the coords of the target with nearest-neighbor interpolation.
 
         Args:
             ds_target_grid: Dataset containing the target coordinates.
-            time_dim: The name of the time dimension/coordinate
+            time_dim: Name of the time dimension. Defaults to "time". Use `None` to
+                force regridding over the time dimension.
 
         Returns:
             Data regridded to the target dataset coordinates.
@@ -57,14 +59,15 @@ class Regridder:
     def cubic(
         self,
         ds_target_grid: xr.Dataset,
-        time_dim: str = "time",
+        time_dim: str | None = "time",
     ) -> xr.DataArray | xr.Dataset:
         ds_target_grid = validate_input(self._obj, ds_target_grid, time_dim)
         """Regrid to the coords of the target dataset with cubic interpolation.
 
         Args:
             ds_target_grid: Dataset containing the target coordinates.
-            time_dim: The name of the time dimension/coordinate
+            time_dim: Name of the time dimension. Defaults to "time". Use `None` to
+                force regridding over the time dimension.
 
         Returns:
             Data regridded to the target dataset coordinates.
@@ -75,7 +78,7 @@ class Regridder:
         self,
         ds_target_grid: xr.Dataset,
         latitude_coord: str | None = None,
-        time_dim: str = "time",
+        time_dim: str | None = "time",
         skipna: bool = True,
         nan_threshold: float = 0.0,
     ) -> xr.DataArray | xr.Dataset:
@@ -86,7 +89,8 @@ class Regridder:
             latitude_coord: Name of the latitude coord, to be used for applying the
                 spherical correction. By default, attempt to infer a latitude coordinate
                 as anything starting with "lat".
-            time_dim: The name of the time dimension/coordinate.
+            time_dim: Name of the time dimension. Defaults to "time". Use `None` to
+                force regridding over the time dimension.
             skipna: If True, enable handling for NaN values. This adds some overhead,
                 so can be disabled for optimal performance on data without any NaNs.
                 Warning: with `skipna=False`, isolated NaNs will propagate throughout
@@ -113,7 +117,7 @@ class Regridder:
         self,
         ds_target_grid: xr.Dataset,
         expected_groups: np.ndarray,
-        time_dim: str = "time",
+        time_dim: str | None = "time",
         inverse: bool = False,
     ) -> xr.DataArray:
         """Regrid by taking the most common value within the new grid cells.
@@ -156,13 +160,43 @@ class Regridder:
             inverse,
         )
 
+    def stat(
+        self,
+        ds_target_grid: xr.Dataset,
+        method: str,
+        time_dim: str | None = "time",
+        skipna: bool = False,
+    ) -> xr.DataArray | xr.Dataset:
+        """Upsampling of data using statistical methods (e.g. the mean or variance).
+
+        We use flox Aggregations to perform a "groupby" over multiple dimensions, which
+        we reduce using the specified method.
+        https://flox.readthedocs.io/en/latest/aggregations.html
+
+        Args:
+            ds_target_grid: Target grid dataset
+            method: One of the following reduction methods: "sum", "mean", "var", "std",
+                or "median.
+            time_dim: Name of the time dimension. Defaults to "time". Use `None` to
+                force regridding over the time dimension.
+            skipna: If NaN values should be ignored.
+
+        Returns:
+            xarray.dataset with regridded land cover categorical data.
+        """
+        ds_target_grid = validate_input(self._obj, ds_target_grid, time_dim)
+
+        return flox_reduce.statistic_reduce(
+            self._obj, ds_target_grid, time_dim, method, skipna
+        )
+
 
 def validate_input(
     data: xr.DataArray | xr.Dataset,
     ds_target_grid: xr.Dataset,
-    time_dim: str,
+    time_dim: str | None,
 ) -> xr.Dataset:
-    if time_dim in ds_target_grid.coords:
+    if time_dim is not None and time_dim in ds_target_grid.coords:
         ds_target_grid = ds_target_grid.isel(time=0).reset_coords()
 
     if len(set(data.dims).intersection(set(ds_target_grid.dims))) == 0:

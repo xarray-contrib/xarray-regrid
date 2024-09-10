@@ -19,4 +19,5 @@ Most notebooks compare the methods implemented in xarray-regrid against more sta
   :caption: Demos
 
   demos/demo_most_common.ipynb
+  demos/demo_variance.ipynb
   demos/demo_conservative_nan_threshold.ipynb
