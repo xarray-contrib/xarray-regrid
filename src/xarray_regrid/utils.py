@@ -281,8 +281,17 @@ def format_lat(
     target: xr.Dataset,  # noqa ARG001
     formatted_coords: dict[str, str],
 ) -> xr.DataArray | xr.Dataset:
-    """For latitude, add a single value at each pole computed as the mean of the last
-    row for global source grids where the first or last point lie equatorward of 90.
+    """If the latitude coordinate is inferred to be global, defined as having
+    a value within one grid spacing of the poles, and the grid does not natively
+    have values at -90 and 90, add a single value at each pole computed as the
+    mean of the first and last latitude bands. This should be roughly equivalent
+    to the `Pole="all"` option in `ESMF`.
+
+    For example, with a grid spacing of 1 degree, and a source grid ranging from
+    -89.5 to 89.5, the poles would be padded with values at -90 and 90. A grid ranging
+    from -88 to 88 would not be padded because coverage does not extend all the way
+    to the poles. A grid ranging from -90 to 90 would also not be padded because the
+    poles will already be covered in the regridding weights.
     """
     lat_coord = formatted_coords["lat"]
     lon_coord = formatted_coords.get("lon")
@@ -295,6 +304,8 @@ def format_lat(
     dy = obj.coords[lat_coord].diff(lat_coord).max().values.item()
 
     # Only pad if global but don't have edge values directly at poles
+    # NOTE: could use xr.pad here instead of xr.concat, but none of the
+    # modes are an exact fit for this scheme
     # South pole
     if dy - polar_lat >= obj.coords[lat_coord].values[0] > -polar_lat:
         south_pole = obj.isel({lat_coord: 0})
@@ -317,9 +328,15 @@ def format_lat(
 def format_lon(
     obj: xr.DataArray | xr.Dataset, target: xr.Dataset, formatted_coords: dict[str, str]
 ) -> xr.DataArray | xr.Dataset:
-    """For longitude, shift the coordinate to line up with the target values, then
-    add a single wraparound padding column if the domain is global and the east
-    or west edges of the target lie outside the source grid centers.
+    """Format the longitude coordinate by shifting the source grid to line up with
+    the target anywhere in the range of -360 to 360, and then add a single wraparound
+    padding column if the domain is inferred to be global and the east or west edges
+    of the target lie outside the source grid centers.
+
+    For example, with a source grid ranging from 0.5 to 359.5 and a target grid ranging
+    from -180 to 180, the source grid would be shifted to -179.5 to 179.5 and then
+    padded on both the left and right with wraparound values at -180.5 and 180.5 to
+    provide full coverage for the target edge cells at -180 and 180.
     """
     lon_coord = formatted_coords["lon"]
 
