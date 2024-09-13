@@ -66,7 +66,7 @@ def conservative_regrid(
     # Attempt to infer the latitude coordinate
     if latitude_coord is None:
         for coord in data.coords:
-            if str(coord).lower().startswith("lat"):
+            if str(coord).lower() in ["lat", "latitude"]:
                 latitude_coord = coord
                 break
 
