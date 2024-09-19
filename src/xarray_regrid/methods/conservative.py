@@ -72,8 +72,10 @@ def conservative_regrid(
 
     # Make sure the regridding coordinates are sorted
     coord_names = [coord for coord in target_ds.coords if coord in data.coords]
-    target_ds_sorted = target_ds.sortby(coord_names)
-    data = data.sortby(list(coord_names))
+    target_ds_sorted = target_ds.copy()
+    for coord_name in coord_names:
+        target_ds_sorted = utils.ensure_monotonic(target_ds_sorted, coord_name)
+        data = utils.ensure_monotonic(data, coord_name)
     coords = {name: target_ds_sorted[name] for name in coord_names}
 
     regridded_data = utils.call_on_dataset(
