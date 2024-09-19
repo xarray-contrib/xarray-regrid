@@ -1,12 +1,10 @@
 from collections.abc import Callable, Hashable
 from dataclasses import dataclass
-from typing import Any, TypedDict, TypeVar
+from typing import Any, TypedDict, overload
 
 import numpy as np
 import pandas as pd
 import xarray as xr
-
-XarrayData = TypeVar("XarrayData", xr.DataArray, xr.Dataset)
 
 
 class InvalidBoundsError(Exception): ...
@@ -189,8 +187,8 @@ def create_dot_dataarray(
 
 
 def common_coords(
-    data1: XarrayData,
-    data2: XarrayData,
+    data1: xr.DataArray | xr.Dataset,
+    data2: xr.DataArray | xr.Dataset,
     remove_coord: str | None = None,
 ) -> list[str]:
     """Return a set of coords which two dataset/arrays have in common."""
@@ -202,10 +200,10 @@ def common_coords(
 
 def call_on_dataset(
     func: Callable[..., xr.Dataset],
-    obj: XarrayData,
+    obj: xr.DataArray | xr.Dataset,
     *args: Any,
     **kwargs: Any,
-) -> XarrayData:
+) -> xr.DataArray | xr.Dataset:
     """Use to call a function that expects a Dataset on either a Dataset or
     DataArray, round-tripping to a temporary dataset."""
     placeholder_name = "_UNNAMED_ARRAY"
@@ -226,7 +224,9 @@ def call_on_dataset(
     return result
 
 
-def format_for_regrid(obj: XarrayData, target: xr.Dataset) -> XarrayData:
+def format_for_regrid(
+    obj: xr.DataArray | xr.Dataset, target: xr.Dataset
+) -> xr.DataArray | xr.Dataset:
     """Apply any pre-formatting to the input dataset to prepare for regridding.
     Currently handles padding of spherical geometry if lat/lon coordinates can
     be inferred and the domain size requires boundary padding.
@@ -259,10 +259,10 @@ def format_for_regrid(obj: XarrayData, target: xr.Dataset) -> XarrayData:
 
 
 def format_lat(
-    obj: XarrayData,
+    obj: xr.DataArray | xr.Dataset,
     target: xr.Dataset,  # noqa ARG001
     formatted_coords: dict[str, str],
-) -> XarrayData:
+) -> xr.DataArray | xr.Dataset:
     """If the latitude coordinate is inferred to be global, defined as having
     a value within one grid spacing of the poles, and the grid does not natively
     have values at -90 and 90, add a single value at each pole computed as the
@@ -311,8 +311,8 @@ def format_lat(
 
 
 def format_lon(
-    obj: XarrayData, target: xr.Dataset, formatted_coords: dict[str, str]
-) -> XarrayData:
+    obj: xr.DataArray | xr.Dataset, target: xr.Dataset, formatted_coords: dict[str, str]
+) -> xr.DataArray | xr.Dataset:
     """Format the longitude coordinate by shifting the source grid to line up with
     the target anywhere in the range of -360 to 360, and then add a single wraparound
     padding column if the domain is inferred to be global and the east or west edges
@@ -361,7 +361,9 @@ def format_lon(
     return obj
 
 
-def coord_is_covered(obj: XarrayData, target: xr.Dataset, coord: Hashable) -> bool:
+def coord_is_covered(
+    obj: xr.DataArray | xr.Dataset, target: xr.Dataset, coord: Hashable
+) -> bool:
     """Check if the source coord fully covers the target coord."""
     pad = target[coord].diff(coord).max().values
     left_covered = obj[coord].min() <= target[coord].min() - pad
@@ -369,20 +371,46 @@ def coord_is_covered(obj: XarrayData, target: xr.Dataset, coord: Hashable) -> bo
     return bool(left_covered.item() and right_covered.item())
 
 
-def ensure_monotonic(obj: XarrayData, coord: Hashable) -> XarrayData:
+@overload
+def ensure_monotonic(obj: xr.DataArray, coord: Hashable) -> xr.DataArray: ...
+
+
+@overload
+def ensure_monotonic(obj: xr.Dataset, coord: Hashable) -> xr.Dataset: ...
+
+
+def ensure_monotonic(
+    obj: xr.DataArray | xr.Dataset, coord: Hashable
+) -> xr.DataArray | xr.Dataset:
     """Ensure that an object has monotonically increasing indexes for a
     given coordinate. Only sort and drop duplicates if needed because this
     requires reindexing which can be expensive."""
-    is_sorted = (obj[coord].diff(coord) >= 0).all().compute().item()
+    is_sorted = (obj.coords[coord].diff(coord) >= 0).all().compute().item()
     if not is_sorted:
         obj = obj.sortby(coord)
-    has_duplicates = np.unique(obj[coord].values).size < obj[coord].values.size
+    has_duplicates = (
+        np.unique(obj.coords[coord].values).size < obj.coords[coord].values.size
+    )
     if has_duplicates:
         obj = obj.drop_duplicates(coord)
     return obj
 
 
-def update_coord(obj: XarrayData, coord: Hashable, coord_vals: np.array) -> XarrayData:
+@overload
+def update_coord(
+    obj: xr.DataArray, coord: Hashable, coord_vals: np.ndarray
+) -> xr.DataArray: ...
+
+
+@overload
+def update_coord(
+    obj: xr.Dataset, coord: Hashable, coord_vals: np.ndarray
+) -> xr.Dataset: ...
+
+
+def update_coord(
+    obj: xr.DataArray | xr.Dataset, coord: Hashable, coord_vals: np.ndarray
+) -> xr.DataArray | xr.Dataset:
     """Update the values of a coordinate, ensuring indexes stay in sync."""
     attrs = obj.coords[coord].attrs
     obj = obj.assign_coords({coord: coord_vals})
