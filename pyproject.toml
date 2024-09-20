@@ -26,6 +26,7 @@ dependencies = [
   "xarray",
   "flox",
   "scipy",
+  "sparse",
 ]
 
 [tool.hatch.build]

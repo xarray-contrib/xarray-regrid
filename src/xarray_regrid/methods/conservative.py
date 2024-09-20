@@ -5,6 +5,7 @@ from typing import overload
 
 import numpy as np
 import xarray as xr
+from sparse import COO  # type: ignore
 
 from xarray_regrid import utils
 
@@ -125,9 +126,10 @@ def conservative_regrid_dataset(
 
         for array in data_vars.keys():
             if coord in data_vars[array].dims:
+                var_weights = sparsify_weights(weights, data_vars[array])
                 data_vars[array], valid_fracs[array] = apply_weights(
                     da=data_vars[array],
-                    weights=weights,
+                    weights=var_weights,
                     coord=coord,
                     valid_frac=valid_fracs[array],
                     skipna=skipna,
@@ -171,7 +173,9 @@ def apply_weights(
         # Renormalize the weights along this dim by the accumulated valid_frac
         # along previous dimensions
         if valid_frac.name != EMPTY_DA_NAME:
-            weights_norm = weights * valid_frac / valid_frac.mean(dim=[coord])
+            weights_norm = weights * (valid_frac / valid_frac.mean(dim=[coord])).fillna(
+                0
+            )
 
     da_reduced: xr.DataArray = xr.dot(
         da.fillna(0), weights_norm, dim=[coord], optimize=True
@@ -180,7 +184,7 @@ def apply_weights(
 
     if skipna:
         weights_valid_sum: xr.DataArray = xr.dot(
-            weights_norm, notnull, dim=[coord], optimize=True
+            notnull, weights_norm, dim=[coord], optimize=True
         )
         weights_valid_sum = weights_valid_sum.rename(coord_map)
         da_reduced /= weights_valid_sum.clip(1e-6, None)
@@ -194,6 +198,13 @@ def apply_weights(
             valid_frac = xr.dot(valid_frac, weights, dim=[coord], optimize=True)
             valid_frac = valid_frac.rename(coord_map)
             valid_frac = valid_frac.clip(0, 1)
+
+    # In some cases, dot product of dask data and sparse weights fails
+    # to densify, which prevents future conversion to numpy
+    if da_reduced.chunks and isinstance(da_reduced.data._meta, COO):
+        da_reduced.data = da_reduced.data.map_blocks(
+            lambda x: x.todense(), dtype=da_reduced.dtype
+        )
 
     return da_reduced, valid_frac
 
@@ -248,3 +259,17 @@ def lat_weight(latitude: np.ndarray, latitude_res: float) -> np.ndarray:
     lat = np.radians(latitude)
     h = np.sin(lat + dlat / 2) - np.sin(lat - dlat / 2)
     return h * dlat / (np.pi * 4)  # type: ignore
+
+
+def sparsify_weights(weights: xr.DataArray, da: xr.DataArray) -> xr.DataArray:
+    """Create a sparse version of the weights that matches the dtype and chunks
+    of the array to be regridded. Even though the weights can be constructed as
+    dense arrays, contraction is more efficient with sparse operations."""
+    new_weights = weights.copy().astype(da.dtype)
+    if da.chunks:
+        chunks = {k: v for k, v in da.chunksizes.items() if k in weights.dims}
+        new_weights.data = new_weights.chunk(chunks).data.map_blocks(COO)
+    else:
+        new_weights.data = COO(weights.data)
+
+    return new_weights

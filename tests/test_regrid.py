@@ -92,10 +92,19 @@ def test_basic_regridders_da(
     xr.testing.assert_allclose(da_regrid, da_cdo, rtol=0.002, atol=2e-5)
 
 
+
+@pytest.mark.parametrize(
+    "chunks",
+    [None, {"time": 1}, {"longitude": 100, "latitude": 100}]
+)
 def test_conservative_regridder(
-    conservative_input_data, conservative_sample_grid, cdo_comparison_data
+    conservative_input_data,
+    conservative_sample_grid,
+    cdo_comparison_data,
+    chunks,
 ):
-    ds_regrid = conservative_input_data.regrid.conservative(
+    input_data = conservative_input_data.chunk(chunks)
+    ds_regrid = input_data.regrid.conservative(
         conservative_sample_grid, latitude_coord="latitude"
     )
     ds_cdo = cdo_comparison_data["conservative"]
