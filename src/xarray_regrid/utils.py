@@ -385,13 +385,9 @@ def ensure_monotonic(
     """Ensure that an object has monotonically increasing indexes for a
     given coordinate. Only sort and drop duplicates if needed because this
     requires reindexing which can be expensive."""
-    is_sorted = (obj.coords[coord].diff(coord) >= 0).all().compute().item()
-    if not is_sorted:
+    if not obj.indexes[coord].is_monotonic_increasing:
         obj = obj.sortby(coord)
-    has_duplicates = (
-        np.unique(obj.coords[coord].values).size < obj.coords[coord].values.size
-    )
-    if has_duplicates:
+    if not obj.indexes[coord].is_unique:
         obj = obj.drop_duplicates(coord)
     return obj
 
