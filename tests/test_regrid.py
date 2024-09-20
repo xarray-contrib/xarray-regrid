@@ -92,10 +92,8 @@ def test_basic_regridders_da(
     xr.testing.assert_allclose(da_regrid, da_cdo, rtol=0.002, atol=2e-5)
 
 
-
 @pytest.mark.parametrize(
-    "chunks",
-    [None, {"time": 1}, {"longitude": 100, "latitude": 100}]
+    "chunks", [{}, {"time": 1}, {"longitude": 100, "latitude": 100}]
 )
 def test_conservative_regridder(
     conservative_input_data,
