@@ -27,6 +27,7 @@ dependencies = [
   "flox",
   "scipy",
   "sparse",
+  "opt-einsum",
 ]
 
 [tool.hatch.build]
