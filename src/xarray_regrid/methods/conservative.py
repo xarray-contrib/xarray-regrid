@@ -72,8 +72,10 @@ def conservative_regrid(
 
     # Make sure the regridding coordinates are sorted
     coord_names = [coord for coord in target_ds.coords if coord in data.coords]
-    target_ds_sorted = target_ds.sortby(coord_names)
-    data = data.sortby(list(coord_names))
+    target_ds_sorted = xr.Dataset(coords=target_ds.coords)
+    for coord_name in coord_names:
+        target_ds_sorted = utils.ensure_monotonic(target_ds_sorted, coord_name)
+        data = utils.ensure_monotonic(data, coord_name)
     coords = {name: target_ds_sorted[name] for name in coord_names}
 
     regridded_data = utils.call_on_dataset(
@@ -122,7 +124,6 @@ def conservative_regrid_dataset(
             weights = apply_spherical_correction(weights, latitude_coord)
 
         for array in data_vars.keys():
-            non_grid_dims = [d for d in data_vars[array].dims if d not in coords]
             if coord in data_vars[array].dims:
                 data_vars[array], valid_fracs[array] = apply_weights(
                     da=data_vars[array],
@@ -130,7 +131,6 @@ def conservative_regrid_dataset(
                     coord=coord,
                     valid_frac=valid_fracs[array],
                     skipna=skipna,
-                    non_grid_dims=non_grid_dims,
                 )
                 # Mask out any regridded points outside the original domain
                 data_vars[array] = data_vars[array].where(covered_grid)
@@ -161,7 +161,6 @@ def apply_weights(
     coord: Hashable,
     valid_frac: xr.DataArray,
     skipna: bool,
-    non_grid_dims: list[Hashable],
 ) -> tuple[xr.DataArray, xr.DataArray]:
     """Apply the weights to convert data to the new coordinates."""
     coord_map = {f"target_{coord}": coord}
@@ -169,8 +168,6 @@ def apply_weights(
 
     if skipna:
         notnull = da.notnull()
-        if non_grid_dims:
-            notnull = notnull.any(non_grid_dims)
         # Renormalize the weights along this dim by the accumulated valid_frac
         # along previous dimensions
         if valid_frac.name != EMPTY_DA_NAME:
