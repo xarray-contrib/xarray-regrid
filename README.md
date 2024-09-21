@@ -24,9 +24,22 @@ Regridding is a common operation in earth science and other fields. While xarray
 
 ## Installation
 
+For a minimal install:
 ```console
 pip install xarray-regrid
 ```
+
+To improve performance in certain cases:
+```console
+pip install xarray-regrid[accel]
+```
+
+which includes optional extras such as:
+ - `dask`: parallelization over chunked data
+ - `sparse`: for performing conservative regridding using sparse weight matrices
+ - `opt-einsum`: optimized einsum routines used in conservative regridding
+
+ Benchmarking varies across different hardware specifications, but the inclusion of these extras can often provide significant speedups.
 
 ## Usage
 The xarray-regrid routines are accessed using the "regrid" accessor on an xarray Dataset:

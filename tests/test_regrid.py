@@ -20,6 +20,8 @@ CDO_FILES = {
     "conservative": DATA_PATH / "cdo_conservative_64b.nc",
 }
 
+CHUNK_SCHEMES = [{}, {"time": 1}, {"longitude": 100, "latitude": 100}]
+
 
 @pytest.fixture(scope="session")
 def sample_input_data() -> xr.Dataset:
@@ -71,30 +73,30 @@ def conservative_sample_grid():
 
 
 @pytest.mark.parametrize("method", ["linear", "nearest"])
+@pytest.mark.parametrize("chunks", CHUNK_SCHEMES)
 def test_basic_regridders_ds(
-    sample_input_data, sample_grid_ds, cdo_comparison_data, method
+    sample_input_data, sample_grid_ds, cdo_comparison_data, method, chunks
 ):
     """Test the dataset regridders (except conservative)."""
-    regridder = getattr(sample_input_data.regrid, method)
+    regridder = getattr(sample_input_data.chunk(chunks).regrid, method)
     ds_regrid = regridder(sample_grid_ds)
     ds_cdo = cdo_comparison_data[method]
     xr.testing.assert_allclose(ds_regrid, ds_cdo, rtol=0.002, atol=2e-5)
 
 
 @pytest.mark.parametrize("method", ["linear", "nearest"])
+@pytest.mark.parametrize("chunks", CHUNK_SCHEMES)
 def test_basic_regridders_da(
-    sample_input_data, sample_grid_ds, cdo_comparison_data, method
+    sample_input_data, sample_grid_ds, cdo_comparison_data, method, chunks
 ):
     """Test the dataarray regridders (except conservative)."""
-    regridder = getattr(sample_input_data["d2m"].regrid, method)
+    regridder = getattr(sample_input_data["d2m"].chunk(chunks).regrid, method)
     da_regrid = regridder(sample_grid_ds)
     da_cdo = cdo_comparison_data[method]["d2m"]
     xr.testing.assert_allclose(da_regrid, da_cdo, rtol=0.002, atol=2e-5)
 
 
-@pytest.mark.parametrize(
-    "chunks", [{}, {"time": 1}, {"longitude": 100, "latitude": 100}]
-)
+@pytest.mark.parametrize("chunks", CHUNK_SCHEMES)
 def test_conservative_regridder(
     conservative_input_data,
     conservative_sample_grid,
