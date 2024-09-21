@@ -42,14 +42,16 @@ Source = "https://github.com/EXCITED-CO2/xarray-regrid"
 accel = [
   "sparse",
   "opt-einsum",
+  "dask[distributed]",
 ]
 benchmarking = [
-  "dask[distributed]",
   "matplotlib",
   "zarr",
   "h5netcdf",
   "requests",
   "aiohttp",
+  "pooch",
+  "cftime",  # required for decode time of test netCDF files
 ]
 dev = [
   "hatch",
@@ -57,9 +59,7 @@ dev = [
   "mypy",
   "pytest",
   "pytest-cov",
-  "cftime",  # required for decode time of test netCDF files
   "pandas-stubs", # Adds typing for pandas.
-  "cftime",
 ]
 docs = [  # Required for ReadTheDocs
   "myst_parser",
