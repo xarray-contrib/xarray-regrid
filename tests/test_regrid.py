@@ -208,7 +208,7 @@ def test_conservative_nan_thresholds_against_coarsen(nan_threshold):
 
 @pytest.mark.skipif(xesmf is None, reason="xesmf required")
 def test_conservative_nan_thresholds_against_xesmf():
-    ds = xr.tutorial.open_dataset("ersstv5").sst.compute().isel(time=[0])
+    ds = xr.tutorial.open_dataset("ersstv5").sst.isel(time=[0]).compute()
     ds = ds.rename(lon="longitude", lat="latitude")
     new_grid = xarray_regrid.Grid(
         north=90,

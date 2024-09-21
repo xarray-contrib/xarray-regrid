@@ -26,8 +26,6 @@ dependencies = [
   "xarray",
   "flox",
   "scipy",
-  "sparse",
-  "opt-einsum",
 ]
 
 [tool.hatch.build]
@@ -41,10 +39,15 @@ Issues = "https://github.com/EXCITED-CO2/xarray-regrid/issues"
 Source = "https://github.com/EXCITED-CO2/xarray-regrid"
 
 [project.optional-dependencies]
+accel = [
+  "sparse",
+  "opt-einsum",
+]
 benchmarking = [
   "dask[distributed]",
   "matplotlib",
   "zarr",
+  "h5netcdf",
   "requests",
   "aiohttp",
 ]
@@ -71,7 +74,7 @@ docs = [  # Required for ReadTheDocs
 path = "src/xarray_regrid/__init__.py"
 
 [tool.hatch.envs.default]
-features = ["dev", "benchmarking"]
+features = ["accel", "dev", "benchmarking"]
 
 [tool.hatch.envs.default.scripts]
 lint = [

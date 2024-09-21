@@ -5,7 +5,11 @@ from typing import overload
 
 import numpy as np
 import xarray as xr
-from sparse import COO  # type: ignore
+
+try:
+    import sparse  # type: ignore
+except ImportError:
+    sparse = None
 
 from xarray_regrid import utils
 
@@ -126,7 +130,11 @@ def conservative_regrid_dataset(
 
         for array in data_vars.keys():
             if coord in data_vars[array].dims:
-                var_weights = sparsify_weights(weights, data_vars[array])
+                if sparse is not None:
+                    var_weights = sparsify_weights(weights, data_vars[array])
+                else:
+                    var_weights = weights
+
                 data_vars[array], valid_fracs[array] = apply_weights(
                     da=data_vars[array],
                     weights=var_weights,
@@ -200,8 +208,12 @@ def apply_weights(
             valid_frac = valid_frac.clip(0, 1)
 
     # In some cases, dot product of dask data and sparse weights fails
-    # to densify, which prevents future conversion to numpy
-    if da_reduced.chunks and isinstance(da_reduced.data._meta, COO):
+    # to automatically densify, which prevents future conversion to numpy
+    if (
+        sparse is not None
+        and da_reduced.chunks
+        and isinstance(da_reduced.data._meta, sparse.COO)
+    ):
         da_reduced.data = da_reduced.data.map_blocks(
             lambda x: x.todense(), dtype=da_reduced.dtype
         )
@@ -268,8 +280,8 @@ def sparsify_weights(weights: xr.DataArray, da: xr.DataArray) -> xr.DataArray:
     new_weights = weights.copy().astype(da.dtype)
     if da.chunks:
         chunks = {k: v for k, v in da.chunksizes.items() if k in weights.dims}
-        new_weights.data = new_weights.chunk(chunks).data.map_blocks(COO)
+        new_weights.data = new_weights.chunk(chunks).data.map_blocks(sparse.COO)
     else:
-        new_weights.data = COO(weights.data)
+        new_weights.data = sparse.COO(weights.data)
 
     return new_weights
