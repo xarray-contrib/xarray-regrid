@@ -6,7 +6,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## Unreleased
 
-# 0.3.0 (2024-09-05)
+Added:
+ - If latitude/longitude coordinates are detected and the domain is global, apply automatic padding at the boundaries, which gives behavior more consistent with common tools like ESMF and CDO ([#45](https://github.com/xarray-contrib/xarray-regrid/pull/45)).
+ - Conservative regridding weights are converted to sparse matrices if the optional [sparse](https://github.com/pydata/sparse) package is installed, which improves compute and memory performance in most cases ([#49](https://github.com/xarray-contrib/xarray-regrid/pull/49)).
+ 
+
+## 0.3.0 (2024-09-05)
 
 New contributors:
  - [@slevang](https://github.com/slevang)
