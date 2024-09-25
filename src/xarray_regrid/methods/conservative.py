@@ -6,6 +6,11 @@ from typing import overload
 import numpy as np
 import xarray as xr
 
+try:
+    import sparse  # type: ignore
+except ImportError:
+    sparse = None
+
 from xarray_regrid import utils
 
 EMPTY_DA_NAME = "FRAC_EMPTY"
@@ -72,8 +77,10 @@ def conservative_regrid(
 
     # Make sure the regridding coordinates are sorted
     coord_names = [coord for coord in target_ds.coords if coord in data.coords]
-    target_ds_sorted = target_ds.sortby(coord_names)
-    data = data.sortby(list(coord_names))
+    target_ds_sorted = xr.Dataset(coords=target_ds.coords)
+    for coord_name in coord_names:
+        target_ds_sorted = utils.ensure_monotonic(target_ds_sorted, coord_name)
+        data = utils.ensure_monotonic(data, coord_name)
     coords = {name: target_ds_sorted[name] for name in coord_names}
 
     regridded_data = utils.call_on_dataset(
@@ -122,15 +129,18 @@ def conservative_regrid_dataset(
             weights = apply_spherical_correction(weights, latitude_coord)
 
         for array in data_vars.keys():
-            non_grid_dims = [d for d in data_vars[array].dims if d not in coords]
             if coord in data_vars[array].dims:
+                if sparse is not None:
+                    var_weights = sparsify_weights(weights, data_vars[array])
+                else:
+                    var_weights = weights
+
                 data_vars[array], valid_fracs[array] = apply_weights(
                     da=data_vars[array],
-                    weights=weights,
+                    weights=var_weights,
                     coord=coord,
                     valid_frac=valid_fracs[array],
                     skipna=skipna,
-                    non_grid_dims=non_grid_dims,
                 )
                 # Mask out any regridded points outside the original domain
                 data_vars[array] = data_vars[array].where(covered_grid)
@@ -161,7 +171,6 @@ def apply_weights(
     coord: Hashable,
     valid_frac: xr.DataArray,
     skipna: bool,
-    non_grid_dims: list[Hashable],
 ) -> tuple[xr.DataArray, xr.DataArray]:
     """Apply the weights to convert data to the new coordinates."""
     coord_map = {f"target_{coord}": coord}
@@ -169,12 +178,12 @@ def apply_weights(
 
     if skipna:
         notnull = da.notnull()
-        if non_grid_dims:
-            notnull = notnull.any(non_grid_dims)
         # Renormalize the weights along this dim by the accumulated valid_frac
         # along previous dimensions
         if valid_frac.name != EMPTY_DA_NAME:
-            weights_norm = weights * valid_frac / valid_frac.mean(dim=[coord])
+            weights_norm = weights * (valid_frac / valid_frac.mean(dim=[coord])).fillna(
+                0
+            )
 
     da_reduced: xr.DataArray = xr.dot(
         da.fillna(0), weights_norm, dim=[coord], optimize=True
@@ -183,7 +192,7 @@ def apply_weights(
 
     if skipna:
         weights_valid_sum: xr.DataArray = xr.dot(
-            weights_norm, notnull, dim=[coord], optimize=True
+            notnull, weights_norm, dim=[coord], optimize=True
         )
         weights_valid_sum = weights_valid_sum.rename(coord_map)
         da_reduced /= weights_valid_sum.clip(1e-6, None)
@@ -197,6 +206,17 @@ def apply_weights(
             valid_frac = xr.dot(valid_frac, weights, dim=[coord], optimize=True)
             valid_frac = valid_frac.rename(coord_map)
             valid_frac = valid_frac.clip(0, 1)
+
+    # In some cases, dot product of dask data and sparse weights fails
+    # to automatically densify, which prevents future conversion to numpy
+    if (
+        sparse is not None
+        and da_reduced.chunks
+        and isinstance(da_reduced.data._meta, sparse.COO)
+    ):
+        da_reduced.data = da_reduced.data.map_blocks(
+            lambda x: x.todense(), dtype=da_reduced.dtype
+        )
 
     return da_reduced, valid_frac
 
@@ -251,3 +271,17 @@ def lat_weight(latitude: np.ndarray, latitude_res: float) -> np.ndarray:
     lat = np.radians(latitude)
     h = np.sin(lat + dlat / 2) - np.sin(lat - dlat / 2)
     return h * dlat / (np.pi * 4)  # type: ignore
+
+
+def sparsify_weights(weights: xr.DataArray, da: xr.DataArray) -> xr.DataArray:
+    """Create a sparse version of the weights that matches the dtype and chunks
+    of the array to be regridded. Even though the weights can be constructed as
+    dense arrays, contraction is more efficient with sparse operations."""
+    new_weights = weights.copy().astype(da.dtype)
+    if da.chunks:
+        chunks = {k: v for k, v in da.chunksizes.items() if k in weights.dims}
+        new_weights.data = new_weights.chunk(chunks).data.map_blocks(sparse.COO)
+    else:
+        new_weights.data = sparse.COO(weights.data)
+
+    return new_weights

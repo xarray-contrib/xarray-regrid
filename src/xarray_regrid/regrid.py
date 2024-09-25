@@ -2,6 +2,7 @@ import numpy as np
 import xarray as xr
 
 from xarray_regrid.methods import conservative, flox_reduce, interp
+from xarray_regrid.utils import format_for_regrid
 
 
 @xr.register_dataarray_accessor("regrid")
@@ -36,7 +37,8 @@ class Regridder:
             Data regridded to the target dataset coordinates.
         """
         ds_target_grid = validate_input(self._obj, ds_target_grid, time_dim)
-        return interp.interp_regrid(self._obj, ds_target_grid, "linear")
+        ds_formatted = format_for_regrid(self._obj, ds_target_grid)
+        return interp.interp_regrid(ds_formatted, ds_target_grid, "linear")
 
     def nearest(
         self,
@@ -54,14 +56,14 @@ class Regridder:
             Data regridded to the target dataset coordinates.
         """
         ds_target_grid = validate_input(self._obj, ds_target_grid, time_dim)
-        return interp.interp_regrid(self._obj, ds_target_grid, "nearest")
+        ds_formatted = format_for_regrid(self._obj, ds_target_grid)
+        return interp.interp_regrid(ds_formatted, ds_target_grid, "nearest")
 
     def cubic(
         self,
         ds_target_grid: xr.Dataset,
         time_dim: str | None = "time",
     ) -> xr.DataArray | xr.Dataset:
-        ds_target_grid = validate_input(self._obj, ds_target_grid, time_dim)
         """Regrid to the coords of the target dataset with cubic interpolation.
 
         Args:
@@ -72,7 +74,9 @@ class Regridder:
         Returns:
             Data regridded to the target dataset coordinates.
         """
-        return interp.interp_regrid(self._obj, ds_target_grid, "cubic")
+        ds_target_grid = validate_input(self._obj, ds_target_grid, time_dim)
+        ds_formatted = format_for_regrid(self._obj, ds_target_grid)
+        return interp.interp_regrid(ds_formatted, ds_target_grid, "cubic")
 
     def conservative(
         self,
@@ -93,6 +97,9 @@ class Regridder:
                 force regridding over the time dimension.
             skipna: If True, enable handling for NaN values. This adds some overhead,
                 so can be disabled for optimal performance on data without any NaNs.
+                With `skipna=True, chunking is recommended in the non-grid dimensions,
+                otherwise the intermediate arrays that track the fraction of valid data
+                can become very large and consume excessive memory.
                 Warning: with `skipna=False`, isolated NaNs will propagate throughout
                 the dataset due to the sequential regridding scheme over each dimension.
             nan_threshold: Threshold value that will retain any output points
@@ -109,8 +116,9 @@ class Regridder:
             raise ValueError(msg)
 
         ds_target_grid = validate_input(self._obj, ds_target_grid, time_dim)
+        ds_formatted = format_for_regrid(self._obj, ds_target_grid)
         return conservative.conservative_regrid(
-            self._obj, ds_target_grid, latitude_coord, skipna, nan_threshold
+            ds_formatted, ds_target_grid, latitude_coord, skipna, nan_threshold
         )
 
     def most_common(

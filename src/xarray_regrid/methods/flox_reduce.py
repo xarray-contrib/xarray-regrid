@@ -73,11 +73,9 @@ def statistic_reduce(
 
     coords = utils.common_coords(data, target_ds, remove_coord=time_dim)
     ds_coords = xr.Dataset(target_ds.coords)  # coords target coords for reindexing
-    target_ds = utils.ensure_monotonic(target_ds, coords)
+    target_ds = utils.ensure_all_monotonic(target_ds, coords)
 
-    bounds = tuple(
-        construct_intervals(target_ds[coord].to_numpy()) for coord in coords
-    )
+    bounds = tuple(construct_intervals(target_ds[coord].to_numpy()) for coord in coords)
 
     data = reduce_data_to_new_domain(data, target_ds, coords)
 
@@ -120,7 +118,7 @@ def get_most_common_value(
     expected_groups: np.ndarray,
     time_dim: str | None,
     inverse: bool = False,
-    fill_value: None | Any = None
+    fill_value: None | Any = None,
 ) -> xr.DataArray:
     """Upsample the input data using a "most common label" (mode) approach.
 

@@ -7,7 +7,4 @@ dependencies:
   - xESMF
   - cdo
   - pip:
-      - "xarray-regrid"
-      - "cftime"
-      - "matplotlib"
-      - "dask[distributed]"
+      - "xarray-regrid[accel,benchmarking,dev]"
