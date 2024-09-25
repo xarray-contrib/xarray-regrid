@@ -231,7 +231,7 @@ class Regridder:
         Args:
             ds_target_grid: Target grid dataset
             method: One of the following reduction methods: "sum", "mean", "var", "std",
-                or "median.
+                "median", "min", or "max".
             time_dim: Name of the time dimension. Defaults to "time". Use `None` to
                 force regridding over the time dimension.
             skipna: If NaN values should be ignored.
@@ -240,9 +240,10 @@ class Regridder:
             xarray.dataset with regridded land cover categorical data.
         """
         ds_target_grid = validate_input(self._obj, ds_target_grid, time_dim)
+        ds_formatted = format_for_regrid(self._obj, ds_target_grid)
 
         return flox_reduce.statistic_reduce(
-            self._obj, ds_target_grid, time_dim, method, skipna
+            ds_formatted, ds_target_grid, time_dim, method, skipna
         )
 
 

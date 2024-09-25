@@ -43,6 +43,21 @@ def dummy_lc_data():
     return ds
 
 
+def make_expected_ds(expected_data) -> xr.Dataset:
+    lat_coords = np.linspace(0, 40, num=6)
+    lon_coords = np.linspace(0, 40, num=6)
+
+    return xr.Dataset(
+        data_vars={
+            "lc": (["longitude", "latitude"], expected_data),
+        },
+        coords={
+            "longitude": (["longitude"], lon_coords),
+            "latitude": (["latitude"], lat_coords),
+        },
+    )
+
+
 @pytest.fixture
 def dummy_target_grid():
     new_grid = Grid(
@@ -80,25 +95,12 @@ def test_most_common(dummy_lc_data, dummy_target_grid):
             [3, 3, 0, 0, 0, 1],
         ]
     )
-
-    lat_coords = np.linspace(0, 40, num=6)
-    lon_coords = np.linspace(0, 40, num=6)
-
-    expected = xr.Dataset(
-        data_vars={
-            "lc": (["longitude", "latitude"], expected_data),
-        },
-        coords={
-            "longitude": (["longitude"], lon_coords),
-            "latitude": (["latitude"], lat_coords),
-        },
-    )
     xr.testing.assert_equal(
         dummy_lc_data["lc"].regrid.most_common(
             dummy_target_grid,
             values=EXP_LABELS,
         ),
-        expected["lc"],
+        make_expected_ds(expected_data)["lc"],
     )
 
 
@@ -189,3 +191,39 @@ def test_coord_order_reversed(dummy_lc_data, dummy_target_grid, coord, dataarray
     )
     assert_array_equal(ds_regrid["latitude"], dummy_target_grid["latitude"])
     assert_array_equal(ds_regrid["longitude"], dummy_target_grid["longitude"])
+
+
+def test_min(dummy_lc_data, dummy_target_grid):
+    expected_data = np.array(
+        [
+            [2.0, 2.0, 0.0, 0.0, 0.0, 0.0],
+            [0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+            [0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+            [0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+            [0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+            [3.0, 0.0, 0.0, 0.0, 0.0, 1.0],
+        ]
+    )
+
+    xr.testing.assert_equal(
+        dummy_lc_data["lc"].astype(float).regrid.stat(dummy_target_grid, "min"),
+        make_expected_ds(expected_data)["lc"],
+    )
+
+
+def test_var(dummy_lc_data, dummy_target_grid):
+    expected_data = np.array(
+        [
+            [0.0, 0.0, 1.0, 0.0, 0.0, 0.0],
+            [1.0, 0.75, 0.75, 0.0, 0.0, 0.0],
+            [0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+            [0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+            [2.25, 0.0, 0.0, 0.0, 0.0, 0.25],
+            [0.0, 1.6875, 2.25, 0.0, 0.25, 0.0],
+        ]
+    )
+
+    xr.testing.assert_equal(
+        dummy_lc_data["lc"].astype(float).regrid.stat(dummy_target_grid, "var"),
+        make_expected_ds(expected_data)["lc"],
+    )
