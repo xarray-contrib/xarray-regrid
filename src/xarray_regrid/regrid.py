@@ -1,3 +1,5 @@
+from typing import overload
+
 import numpy as np
 import xarray as xr
 
@@ -158,7 +160,7 @@ class Regridder:
             )
             raise ValueError(msg)
 
-        ds_formatted = format_for_regrid(self._obj, ds_target_grid)
+        ds_formatted = format_for_regrid(self._obj, ds_target_grid, stats=True)
 
         return flox_reduce.compute_mode(
             ds_formatted,
@@ -205,7 +207,7 @@ class Regridder:
             )
             raise ValueError(msg)
 
-        ds_formatted = format_for_regrid(self._obj, ds_target_grid)
+        ds_formatted = format_for_regrid(self._obj, ds_target_grid, stats=True)
 
         return flox_reduce.compute_mode(
             ds_formatted,
@@ -240,11 +242,27 @@ class Regridder:
             xarray.dataset with regridded land cover categorical data.
         """
         ds_target_grid = validate_input(self._obj, ds_target_grid, time_dim)
-        ds_formatted = format_for_regrid(self._obj, ds_target_grid)
+        ds_formatted = format_for_regrid(self._obj, ds_target_grid, stats=True)
 
         return flox_reduce.statistic_reduce(
             ds_formatted, ds_target_grid, time_dim, method, skipna
         )
+
+
+@overload
+def validate_input(
+    data: xr.Dataset,
+    ds_target_grid: xr.Dataset,
+    time_dim: str | None,
+) -> xr.Dataset: ...
+
+
+@overload
+def validate_input(
+    data: xr.DataArray,
+    ds_target_grid: xr.Dataset,
+    time_dim: str | None,
+) -> xr.Dataset: ...
 
 
 def validate_input(
