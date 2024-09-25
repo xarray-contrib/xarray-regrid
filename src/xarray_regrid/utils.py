@@ -257,9 +257,10 @@ def format_for_regrid(
         "lon": {"names": ["lon", "longitude"], "func": format_lon},
     }
 
+    # Latitude padding adds a duplicate value which will undesirably
+    # alter statistical aggregations
     if stats:
-        coord_handlers.pop("lat")  # padding lat with stats methods is problematic.
-        coord_handlers.pop("lon")  # padding lon causes casting to float
+        coord_handlers.pop("lat")
 
     # Identify coordinates that need to be formatted
     formatted_coords = {}
@@ -379,6 +380,7 @@ def format_lon(
         if right_pad:
             lon_vals[-right_pad:] = source_lon.values[:right_pad] + 360
         obj = update_coord(obj, lon_coord, lon_vals)
+        obj = ensure_monotonic(obj, lon_coord)
 
     return obj
 
