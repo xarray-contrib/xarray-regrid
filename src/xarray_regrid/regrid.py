@@ -124,7 +124,7 @@ class Regridder:
     def most_common(
         self,
         ds_target_grid: xr.Dataset,
-        expected_groups: np.ndarray,
+        values: np.ndarray,
         time_dim: str | None = "time",
     ) -> xr.DataArray:
         """Regrid by taking the most common value within the new grid cells.
@@ -138,7 +138,7 @@ class Regridder:
 
         Args:
             ds_target_grid: Target grid dataset
-            expected_groups: Numpy array containing all labels expected to be in the
+            values: Numpy array containing all labels expected to be in the
                 input data. For example, `np.array([0, 2, 4])`, if the data only
                 contains the values 0, 2 and 4.
             time_dim: Name of the time dimension. Defaults to "time". Use `None` to
@@ -163,7 +163,7 @@ class Regridder:
         return flox_reduce.compute_mode(
             ds_formatted,
             ds_target_grid,
-            expected_groups,
+            values,
             time_dim,
             anti_mode=False,
         )
@@ -171,7 +171,7 @@ class Regridder:
     def least_common(
         self,
         ds_target_grid: xr.Dataset,
-        expected_groups: np.ndarray,
+        values: np.ndarray,
         time_dim: str | None = "time",
     ) -> xr.DataArray:
         """Regrid by taking the least common value within the new grid cells.
@@ -185,7 +185,7 @@ class Regridder:
 
         Args:
             ds_target_grid: Target grid dataset
-            expected_groups: Numpy array containing all labels expected to be in the
+            values: Numpy array containing all labels expected to be in the
                 input data. For example, `np.array([0, 2, 4])`, if the data only
                 contains the values 0, 2 and 4.
             time_dim: Name of the time dimension. Defaults to "time". Use `None` to
@@ -210,7 +210,7 @@ class Regridder:
         return flox_reduce.compute_mode(
             ds_formatted,
             ds_target_grid,
-            expected_groups,
+            values,
             time_dim,
             anti_mode=True,
         )

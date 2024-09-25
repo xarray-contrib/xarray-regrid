@@ -115,7 +115,7 @@ def find_matching_int_dtype(
 def compute_mode(
     data: xr.DataArray,
     target_ds: xr.Dataset,
-    expected_groups: np.ndarray,
+    values: np.ndarray,
     time_dim: str | None,
     fill_value: None | Any = None,
     anti_mode: bool = False,
@@ -126,7 +126,7 @@ def compute_mode(
         data: Input DataArray, with an integer data type. If your data does not consist
             of integer type values, you will have to encode them to integer types.
         target_ds: Dataset which coordinates the input dataset should be regrid to.
-        expected_groups: Numpy array containing all labels expected to be in the input
+        values: Numpy array containing all labels expected to be in the input
             data. For example, `np.array([0, 2, 4])`, if the data only contains the
             values 0, 2 and 4.
         time_dim: Name of the time dimension. Defaults to "time". Use `None` to force
@@ -167,7 +167,7 @@ def compute_mode(
         *coords,
         dim=coords,
         func="count",
-        expected_groups=(pd.Index(expected_groups.astype(data)), *bounds),
+        expected_groups=(pd.Index(values.astype(data)), *bounds),
         fill_value=-1,
     )
     result = result.idxmax(array_name) if not anti_mode else result.idxmin(array_name)

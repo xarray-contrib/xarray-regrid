@@ -96,7 +96,7 @@ def test_most_common(dummy_lc_data, dummy_target_grid):
     xr.testing.assert_equal(
         dummy_lc_data["lc"].regrid.most_common(
             dummy_target_grid,
-            expected_groups=EXP_LABELS,
+            values=EXP_LABELS,
         ),
         expected["lc"],
     )
@@ -106,7 +106,7 @@ def test_least_common(dummy_lc_data, dummy_target_grid):
     # Currently just test if the method runs: code is 99% the same as most_common
     dummy_lc_data["lc"].regrid.least_common(
         dummy_target_grid,
-        expected_groups=EXP_LABELS,
+        values=EXP_LABELS,
     )
 
 
@@ -139,7 +139,7 @@ def test_oversized_most_common(dummy_lc_data, oversized_dummy_target_grid):
     xr.testing.assert_equal(
         dummy_lc_data["lc"].regrid.most_common(
             oversized_dummy_target_grid,
-            expected_groups=EXP_LABELS,
+            values=EXP_LABELS,
         ),
         expected["lc"],
     )
@@ -149,7 +149,7 @@ def test_attrs_dataarray(dummy_lc_data, dummy_target_grid):
     dummy_lc_data["lc"].attrs = {"test": "testing"}
     da_regrid = dummy_lc_data["lc"].regrid.most_common(
         dummy_target_grid,
-        expected_groups=EXP_LABELS,
+        values=EXP_LABELS,
     )
     assert da_regrid.attrs != {}
     assert da_regrid.attrs == dummy_lc_data["lc"].attrs
@@ -160,7 +160,7 @@ def test_attrs_dataarray(dummy_lc_data, dummy_target_grid):
 def test_attrs_dataset(dummy_lc_data, dummy_target_grid):
     ds_regrid = dummy_lc_data.regrid.most_common(
         dummy_target_grid,
-        expected_groups=EXP_LABELS,
+        values=EXP_LABELS,
     )
     assert ds_regrid.attrs != {}
     assert ds_regrid.attrs == dummy_lc_data.attrs
@@ -172,7 +172,7 @@ def test_coord_order_original(dummy_lc_data, dummy_target_grid, dataarray):
     input_data = dummy_lc_data["lc"] if dataarray else dummy_lc_data
     ds_regrid = input_data.regrid.most_common(
         dummy_target_grid,
-        expected_groups=EXP_LABELS,
+        values=EXP_LABELS,
     )
     assert_array_equal(ds_regrid["latitude"], dummy_target_grid["latitude"])
     assert_array_equal(ds_regrid["longitude"], dummy_target_grid["longitude"])
@@ -185,7 +185,7 @@ def test_coord_order_reversed(dummy_lc_data, dummy_target_grid, coord, dataarray
     dummy_target_grid[coord] = list(reversed(dummy_target_grid[coord]))
     ds_regrid = input_data.regrid.most_common(
         dummy_target_grid,
-        expected_groups=EXP_LABELS,
+        values=EXP_LABELS,
     )
     assert_array_equal(ds_regrid["latitude"], dummy_target_grid["latitude"])
     assert_array_equal(ds_regrid["longitude"], dummy_target_grid["longitude"])
