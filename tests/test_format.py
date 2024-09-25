@@ -179,7 +179,7 @@ def test_global_to_local_shift():
     assert (formatted.longitude.diff("longitude") == 2).all()
 
 
-def test_stat():
+def test_stats():
     """Special handling for statistical aggregations."""
     dx_source = 1
     source = xarray_regrid.Grid(
@@ -214,5 +214,5 @@ def test_stat():
     assert formatted.longitude[0] == -1.5
     assert formatted.longitude[-1] == 361.5
     # And preserve integer dtypes
-    assert formatted.data.dtype == np.int64
+    assert formatted.data.dtype == source.data.dtype
     assert (formatted.longitude.diff("longitude") == 1).all()
