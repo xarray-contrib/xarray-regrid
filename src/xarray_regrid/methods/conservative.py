@@ -13,8 +13,6 @@ except ImportError:
 
 from xarray_regrid import utils
 
-EMPTY_DA_NAME = "FRAC_EMPTY"
-
 
 @overload
 def conservative_regrid(
@@ -107,13 +105,15 @@ def conservative_regrid_dataset(
     """Dataset implementation of the conservative regridding method."""
     data_vars = dict(data.data_vars)
     data_coords = dict(data.coords)
-    valid_fracs = {v: xr.DataArray(name=EMPTY_DA_NAME) for v in data_vars}
     data_attrs = {v: data_vars[v].attrs for v in data_vars}
     coord_attrs = {c: data_coords[c].attrs for c in data_coords}
     ds_attrs = data.attrs
 
+    # Create weights array and coverage mask for each regridding dim
+    weights = {}
+    covered = {}
     for coord in coords:
-        covered_grid = (coords[coord] <= data[coord].max()) & (
+        covered[coord] = (coords[coord] <= data[coord].max()) & (
             coords[coord] >= data[coord].min()
         )
 
@@ -121,36 +121,37 @@ def conservative_regrid_dataset(
         source_coords = data[coord].to_numpy()
         nd_weights = get_weights(source_coords, target_coords)
 
-        # Modify weights to correct for latitude distortion
-        weights = utils.create_dot_dataarray(
+        da_weights = utils.create_dot_dataarray(
             nd_weights, str(coord), target_coords, source_coords
         )
+        # Modify weights to correct for latitude distortion
         if coord == latitude_coord:
-            weights = apply_spherical_correction(weights, latitude_coord)
+            da_weights = apply_spherical_correction(da_weights, latitude_coord)
+        weights[coord] = da_weights
 
-        for array in data_vars.keys():
-            if coord in data_vars[array].dims:
-                if sparse is not None:
-                    var_weights = sparsify_weights(weights, data_vars[array])
-                else:
-                    var_weights = weights
+    # Apply the weights, using a unique set that matches chunking of each array
+    for array in data_vars.keys():
+        var_weights = {}
+        for coord, weight_array in weights.items():
+            if sparse is not None:
+                var_weights[coord] = sparsify_weights(weight_array, data_vars[array])
+            else:
+                var_weights[coord] = weight_array
 
-                data_vars[array], valid_fracs[array] = apply_weights(
-                    da=data_vars[array],
-                    weights=var_weights,
-                    coord=coord,
-                    valid_frac=valid_fracs[array],
-                    skipna=skipna,
-                )
-                # Mask out any regridded points outside the original domain
-                data_vars[array] = data_vars[array].where(covered_grid)
+        data_vars[array] = apply_weights(
+            da=data_vars[array],
+            weights=var_weights,
+            skipna=skipna,
+            nan_threshold=nan_threshold,
+        )
+        # Mask out any regridded points outside the original domain
+        # Limit to dims present on this array otherwise .where broadcasts
+        var_covered = xr.DataArray(True)
+        for coord in var_weights.keys():
+            var_covered = var_covered & covered[coord]
+        data_vars[array] = data_vars[array].where(var_covered)
 
-    if skipna:
-        # Mask out any points that don't meet the nan threshold
-        valid_threshold = get_valid_threshold(nan_threshold)
-        for array, da in data_vars.items():
-            data_vars[array] = da.where(valid_fracs[array] >= valid_threshold)
-
+    # Rebuild the results ensuring we preserve attributes and other coordinates
     for array, attrs in data_attrs.items():
         data_vars[array].attrs = attrs
 
@@ -167,58 +168,32 @@ def conservative_regrid_dataset(
 
 def apply_weights(
     da: xr.DataArray,
-    weights: xr.DataArray,
-    coord: Hashable,
-    valid_frac: xr.DataArray,
+    weights: dict[Hashable, xr.DataArray],
     skipna: bool,
-) -> tuple[xr.DataArray, xr.DataArray]:
-    """Apply the weights to convert data to the new coordinates."""
-    coord_map = {f"target_{coord}": coord}
-    weights_norm = weights.copy()
+    nan_threshold: float,
+) -> xr.DataArray:
+    """Apply the weights over all regridding dimensions simultaneously with `xr.dot`."""
+    coords = list(weights.keys())
+    weight_arrays = list(weights.values())
 
     if skipna:
-        notnull = da.notnull()
-        # Renormalize the weights along this dim by the accumulated valid_frac
-        # along previous dimensions
-        if valid_frac.name != EMPTY_DA_NAME:
-            weights_norm = weights * (valid_frac / valid_frac.mean(dim=[coord])).fillna(
-                0
-            )
+        valid_frac = xr.dot(
+            da.notnull(), *weight_arrays, dim=list(weights.keys()), optimize=True
+        )
 
-    da_reduced: xr.DataArray = xr.dot(
-        da.fillna(0), weights_norm, dim=[coord], optimize=True
+    da_regrid: xr.DataArray = xr.dot(
+        da.fillna(0), *weight_arrays, dim=list(weights.keys()), optimize=True
     )
-    da_reduced = da_reduced.rename(coord_map).transpose(*da.dims)
 
     if skipna:
-        weights_valid_sum: xr.DataArray = xr.dot(
-            notnull, weights_norm, dim=[coord], optimize=True
-        )
-        weights_valid_sum = weights_valid_sum.rename(coord_map)
-        da_reduced /= weights_valid_sum.clip(1e-6, None)
+        da_regrid /= valid_frac
+        da_regrid = da_regrid.where(valid_frac >= get_valid_threshold(nan_threshold))
 
-        if valid_frac.name == EMPTY_DA_NAME:
-            # Begin tracking the valid fraction
-            valid_frac = weights_valid_sum
+    # Rename temporary coordinates and ensure original dimension order
+    coord_map = {f"target_{coord}": coord for coord in coords}
+    da_regrid = da_regrid.rename(coord_map).transpose(*da.dims)
 
-        else:
-            # Update the valid points on this dimension
-            valid_frac = xr.dot(valid_frac, weights, dim=[coord], optimize=True)
-            valid_frac = valid_frac.rename(coord_map)
-            valid_frac = valid_frac.clip(0, 1)
-
-    # In some cases, dot product of dask data and sparse weights fails
-    # to automatically densify, which prevents future conversion to numpy
-    if (
-        sparse is not None
-        and da_reduced.chunks
-        and isinstance(da_reduced.data._meta, sparse.COO)
-    ):
-        da_reduced.data = da_reduced.data.map_blocks(
-            lambda x: x.todense(), dtype=da_reduced.dtype
-        )
-
-    return da_reduced, valid_frac
+    return da_regrid
 
 
 def get_valid_threshold(nan_threshold: float) -> float:

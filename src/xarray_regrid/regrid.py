@@ -86,7 +86,7 @@ class Regridder:
         latitude_coord: str | None = None,
         time_dim: str | None = "time",
         skipna: bool = True,
-        nan_threshold: float = 0.0,
+        nan_threshold: float = 1.0,
     ) -> xr.DataArray | xr.Dataset:
         """Regrid to the coords of the target dataset with a conservative scheme.
 
@@ -94,16 +94,12 @@ class Regridder:
             ds_target_grid: Dataset containing the target coordinates.
             latitude_coord: Name of the latitude coord, to be used for applying the
                 spherical correction. By default, attempt to infer a latitude coordinate
-                as anything starting with "lat".
+                as either "latitude" or "lat".
             time_dim: Name of the time dimension. Defaults to "time". Use `None` to
                 force regridding over the time dimension.
-            skipna: If True, enable handling for NaN values. This adds some overhead,
-                so can be disabled for optimal performance on data without any NaNs.
-                With `skipna=True, chunking is recommended in the non-grid dimensions,
-                otherwise the intermediate arrays that track the fraction of valid data
-                can become very large and consume excessive memory.
-                Warning: with `skipna=False`, isolated NaNs will propagate throughout
-                the dataset due to the sequential regridding scheme over each dimension.
+            skipna: If True, enable handling for NaN values. This adds only a small
+                amount of overhead, but can be disabled for optimal performance on data
+                without any NaNs.
             nan_threshold: Threshold value that will retain any output points
                 containing at least this many non-null input points. The default value
                 is 1.0, which will keep output points containing any non-null inputs,
