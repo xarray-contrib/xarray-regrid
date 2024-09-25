@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 Changed:
  - the "most common" routine has been overhauled, thanks to [@dcherian](https://github.com/dcherian). It is now much more efficient, and can operate fully lazily on dask arrays. Users do need to provide the expected groups (i.e., unique labels in the data), and the regridder is only available for `xr.DataArray` currently ([#46](https://github.com/xarray-contrib/xarray-regrid/pull/46)).
  - you can now use `None` as input to the `time_dim` kwarg in the regridding methods to force regridding over the time dimension (as long as it's numeric) ([#46](https://github.com/xarray-contrib/xarray-regrid/pull/46)).
+ - performance of the conservative method has been improved by simultaneously aggregating over all regridding dimensions ([#51](https://github.com/xarray-contrib/xarray-regrid/pull/51)).
 
 Added:
  - `.regrid.stat` for reducing datasets using statistical methods such as the variance or median ([#46](https://github.com/xarray-contrib/xarray-regrid/pull/46)).
