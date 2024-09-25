@@ -190,12 +190,12 @@ def common_coords(
     data1: xr.DataArray | xr.Dataset,
     data2: xr.DataArray | xr.Dataset,
     remove_coord: str | None = None,
-) -> list[str]:
+) -> list[Hashable]:
     """Return a set of coords which two dataset/arrays have in common."""
     coords = set(data1.coords).intersection(set(data2.coords))
     if remove_coord in coords:
         coords.remove(remove_coord)
-    return sorted([str(coord) for coord in coords])
+    return list(coords)
 
 
 def call_on_dataset(
@@ -224,8 +224,26 @@ def call_on_dataset(
     return result
 
 
+@overload
 def format_for_regrid(
-    obj: xr.DataArray | xr.Dataset, target: xr.Dataset
+    obj: xr.Dataset,
+    target: xr.Dataset,
+    stats: bool = False,
+) -> xr.Dataset: ...
+
+
+@overload
+def format_for_regrid(
+    obj: xr.DataArray,
+    target: xr.Dataset,
+    stats: bool = False,
+) -> xr.DataArray: ...
+
+
+def format_for_regrid(
+    obj: xr.DataArray | xr.Dataset,
+    target: xr.Dataset,
+    stats: bool = False,
 ) -> xr.DataArray | xr.Dataset:
     """Apply any pre-formatting to the input dataset to prepare for regridding.
     Currently handles padding of spherical geometry if lat/lon coordinates can
@@ -238,6 +256,12 @@ def format_for_regrid(
         "lat": {"names": ["lat", "latitude"], "func": format_lat},
         "lon": {"names": ["lon", "longitude"], "func": format_lon},
     }
+
+    # Latitude padding adds a duplicate value which will undesirably
+    # alter statistical aggregations
+    if stats:
+        coord_handlers.pop("lat")
+
     # Identify coordinates that need to be formatted
     formatted_coords = {}
     for coord_type, handler in coord_handlers.items():
@@ -254,7 +278,6 @@ def format_for_regrid(
         # Coerce back to a single chunk if that's what was passed
         if len(orig_chunksizes.get(coord, [])) == 1:
             obj = obj.chunk({coord: -1})
-
     return obj
 
 
@@ -357,6 +380,7 @@ def format_lon(
         if right_pad:
             lon_vals[-right_pad:] = source_lon.values[:right_pad] + 360
         obj = update_coord(obj, lon_coord, lon_vals)
+        obj = ensure_monotonic(obj, lon_coord)
 
     return obj
 

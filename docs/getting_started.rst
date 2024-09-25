@@ -32,7 +32,9 @@ Multiple regridding methods are available:
 * `nearest-neighbor <autoapi/xarray_regrid/regrid/index.html#xarray_regrid.regrid.Regridder.conservative>`_ (``.regrid.nearest``)
 * `cubic interpolation  <autoapi/xarray_regrid/regrid/index.html#xarray_regrid.regrid.Regridder.cubic>`_ (``.regrid.cubic``)
 * `conservative regridding <autoapi/xarray_regrid/regrid/index.html#xarray_regrid.regrid.Regridder.conservative>`_ (``.regrid.conservative``)
+* `zonal statistics <autoapi/xarray_regrid/regrid/index.html#xarray_regrid.regrid.Regridder.stat>`_ (``.regrid.stat``) is available to compute statistics such as the maximum value, or variance. 
 
-Additionally, a zonal statistics `method to compute the most common value <autoapi/xarray_regrid/regrid/index.html#xarray_regrid.regrid.Regridder.most_common>`_
-is available (``.regrid.most_common``).
-This can be used to upscale very fine categorical data to a more course resolution.
+Additionally, there are separate methods available to compute the
+`most common value <autoapi/xarray_regrid/regrid/index.html#xarray_regrid.regrid.Regridder.most_common>`_
+(``.regrid.most_common``) and `least common value <autoapi/xarray_regrid/regrid/index.html#xarray_regrid.regrid.Regridder.least_common>`_
+(``.regrid.least_common``). This can be used to upscale very fine categorical data to a more course resolution.

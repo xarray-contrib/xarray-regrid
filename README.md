@@ -8,9 +8,9 @@ With xarray-regrid it is possible to regrid between two rectilinear grids. The f
  - Nearest-neighbor
  - Conservative
  - Cubic
- - "Most common value" (zonal statistics)
+ - "Most common value", as well as other zonal statistics (e.g., variance or median).
 
-All regridding methods, except for the "most common value" can operate lazily on [Dask arrays](https://docs.xarray.dev/en/latest/user-guide/dask.html).
+All regridding methods can operate lazily on [Dask arrays](https://docs.xarray.dev/en/latest/user-guide/dask.html).
 
 Note that "Most common value" is designed to regrid categorical data to a coarse resolution. For regridding categorical data to a finer resolution, please use "nearest-neighbor" regridder.
 

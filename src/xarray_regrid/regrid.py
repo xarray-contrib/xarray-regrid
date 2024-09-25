@@ -1,6 +1,9 @@
+from typing import overload
+
+import numpy as np
 import xarray as xr
 
-from xarray_regrid.methods import conservative, interp, most_common
+from xarray_regrid.methods import conservative, flox_reduce, interp
 from xarray_regrid.utils import format_for_regrid
 
 
@@ -23,13 +26,14 @@ class Regridder:
     def linear(
         self,
         ds_target_grid: xr.Dataset,
-        time_dim: str = "time",
+        time_dim: str | None = "time",
     ) -> xr.DataArray | xr.Dataset:
         """Regrid to the coords of the target dataset with linear interpolation.
 
         Args:
             ds_target_grid: Dataset containing the target coordinates.
-            time_dim: The name of the time dimension/coordinate
+            time_dim: Name of the time dimension. Defaults to "time". Use `None` to
+                force regridding over the time dimension.
 
         Returns:
             Data regridded to the target dataset coordinates.
@@ -41,13 +45,14 @@ class Regridder:
     def nearest(
         self,
         ds_target_grid: xr.Dataset,
-        time_dim: str = "time",
+        time_dim: str | None = "time",
     ) -> xr.DataArray | xr.Dataset:
         """Regrid to the coords of the target with nearest-neighbor interpolation.
 
         Args:
             ds_target_grid: Dataset containing the target coordinates.
-            time_dim: The name of the time dimension/coordinate
+            time_dim: Name of the time dimension. Defaults to "time". Use `None` to
+                force regridding over the time dimension.
 
         Returns:
             Data regridded to the target dataset coordinates.
@@ -59,13 +64,14 @@ class Regridder:
     def cubic(
         self,
         ds_target_grid: xr.Dataset,
-        time_dim: str = "time",
+        time_dim: str | None = "time",
     ) -> xr.DataArray | xr.Dataset:
         """Regrid to the coords of the target dataset with cubic interpolation.
 
         Args:
             ds_target_grid: Dataset containing the target coordinates.
-            time_dim: The name of the time dimension/coordinate
+            time_dim: Name of the time dimension. Defaults to "time". Use `None` to
+                force regridding over the time dimension.
 
         Returns:
             Data regridded to the target dataset coordinates.
@@ -78,7 +84,7 @@ class Regridder:
         self,
         ds_target_grid: xr.Dataset,
         latitude_coord: str | None = None,
-        time_dim: str = "time",
+        time_dim: str | None = "time",
         skipna: bool = True,
         nan_threshold: float = 0.0,
     ) -> xr.DataArray | xr.Dataset:
@@ -89,7 +95,8 @@ class Regridder:
             latitude_coord: Name of the latitude coord, to be used for applying the
                 spherical correction. By default, attempt to infer a latitude coordinate
                 as anything starting with "lat".
-            time_dim: The name of the time dimension/coordinate.
+            time_dim: Name of the time dimension. Defaults to "time". Use `None` to
+                force regridding over the time dimension.
             skipna: If True, enable handling for NaN values. This adds some overhead,
                 so can be disabled for optimal performance on data without any NaNs.
                 With `skipna=True, chunking is recommended in the non-grid dimensions,
@@ -119,9 +126,9 @@ class Regridder:
     def most_common(
         self,
         ds_target_grid: xr.Dataset,
-        time_dim: str = "time",
-        max_mem: int = int(1e9),
-    ) -> xr.DataArray | xr.Dataset:
+        values: np.ndarray,
+        time_dim: str | None = "time",
+    ) -> xr.DataArray:
         """Regrid by taking the most common value within the new grid cells.
 
         To be used for regridding data to a much coarser resolution, not for regridding
@@ -133,27 +140,137 @@ class Regridder:
 
         Args:
             ds_target_grid: Target grid dataset
-            time_dim: Name of the time dimension. Defaults to "time".
-            max_mem: (Approximate) maximum memory in bytes that the regridding routine
-                can use. Note that this is not the total memory consumption and does not
-                include the size of the final dataset. Defaults to 1e9 (1 GB).
+            values: Numpy array containing all labels expected to be in the
+                input data. For example, `np.array([0, 2, 4])`, if the data only
+                contains the values 0, 2 and 4.
+            time_dim: Name of the time dimension. Defaults to "time". Use `None` to
+                force regridding over the time dimension.
 
         Returns:
             Regridded data.
         """
         ds_target_grid = validate_input(self._obj, ds_target_grid, time_dim)
-        ds_formatted = format_for_regrid(self._obj, ds_target_grid)
-        return most_common.most_common_wrapper(
-            ds_formatted, ds_target_grid, time_dim, max_mem
+
+        if isinstance(self._obj, xr.Dataset):
+            msg = (
+                "The 'most common value' regridder is not implemented for\n",
+                "xarray.Dataset, as it requires specifying the expected labels.\n"
+                "Please select only a single variable (as DataArray),\n"
+                " and regrid it separately.",
+            )
+            raise ValueError(msg)
+
+        ds_formatted = format_for_regrid(self._obj, ds_target_grid, stats=True)
+
+        return flox_reduce.compute_mode(
+            ds_formatted,
+            ds_target_grid,
+            values,
+            time_dim,
+            anti_mode=False,
         )
+
+    def least_common(
+        self,
+        ds_target_grid: xr.Dataset,
+        values: np.ndarray,
+        time_dim: str | None = "time",
+    ) -> xr.DataArray:
+        """Regrid by taking the least common value within the new grid cells.
+
+        To be used for regridding data to a much coarser resolution, not for regridding
+        when the source and target grids are of a similar resolution.
+
+        Note that in the case of two unqiue values with the same count, the behaviour
+        is not deterministic, and the resulting "least common" one will randomly be
+        either of the two.
+
+        Args:
+            ds_target_grid: Target grid dataset
+            values: Numpy array containing all labels expected to be in the
+                input data. For example, `np.array([0, 2, 4])`, if the data only
+                contains the values 0, 2 and 4.
+            time_dim: Name of the time dimension. Defaults to "time". Use `None` to
+                force regridding over the time dimension.
+
+        Returns:
+            Regridded data.
+        """
+        ds_target_grid = validate_input(self._obj, ds_target_grid, time_dim)
+
+        if isinstance(self._obj, xr.Dataset):
+            msg = (
+                "The 'least common value' regridder is not implemented for\n",
+                "xarray.Dataset, as it requires specifying the expected labels.\n"
+                "Please select only a single variable (as DataArray),\n"
+                " and regrid it separately.",
+            )
+            raise ValueError(msg)
+
+        ds_formatted = format_for_regrid(self._obj, ds_target_grid, stats=True)
+
+        return flox_reduce.compute_mode(
+            ds_formatted,
+            ds_target_grid,
+            values,
+            time_dim,
+            anti_mode=True,
+        )
+
+    def stat(
+        self,
+        ds_target_grid: xr.Dataset,
+        method: str,
+        time_dim: str | None = "time",
+        skipna: bool = False,
+    ) -> xr.DataArray | xr.Dataset:
+        """Upsampling of data using statistical methods (e.g. the mean or variance).
+
+        We use flox Aggregations to perform a "groupby" over multiple dimensions, which
+        we reduce using the specified method.
+        https://flox.readthedocs.io/en/latest/aggregations.html
+
+        Args:
+            ds_target_grid: Target grid dataset
+            method: One of the following reduction methods: "sum", "mean", "var", "std",
+                "median", "min", or "max".
+            time_dim: Name of the time dimension. Defaults to "time". Use `None` to
+                force regridding over the time dimension.
+            skipna: If NaN values should be ignored.
+
+        Returns:
+            xarray.dataset with regridded land cover categorical data.
+        """
+        ds_target_grid = validate_input(self._obj, ds_target_grid, time_dim)
+        ds_formatted = format_for_regrid(self._obj, ds_target_grid, stats=True)
+
+        return flox_reduce.statistic_reduce(
+            ds_formatted, ds_target_grid, time_dim, method, skipna
+        )
+
+
+@overload
+def validate_input(
+    data: xr.Dataset,
+    ds_target_grid: xr.Dataset,
+    time_dim: str | None,
+) -> xr.Dataset: ...
+
+
+@overload
+def validate_input(
+    data: xr.DataArray,
+    ds_target_grid: xr.Dataset,
+    time_dim: str | None,
+) -> xr.Dataset: ...
 
 
 def validate_input(
     data: xr.DataArray | xr.Dataset,
     ds_target_grid: xr.Dataset,
-    time_dim: str,
+    time_dim: str | None,
 ) -> xr.Dataset:
-    if time_dim in ds_target_grid.coords:
+    if time_dim is not None and time_dim in ds_target_grid.coords:
         ds_target_grid = ds_target_grid.isel(time=0).reset_coords()
 
     if len(set(data.dims).intersection(set(ds_target_grid.dims))) == 0:

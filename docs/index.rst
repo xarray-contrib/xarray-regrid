@@ -37,9 +37,11 @@ The following methods are supported:
 * `Nearest-neighbor <autoapi/xarray_regrid/regrid/index.html#xarray_regrid.regrid.Regridder.nearest>`_
 * `Conservative <autoapi/xarray_regrid/regrid/index.html#xarray_regrid.regrid.Regridder.conservative>`_
 * `Cubic <autoapi/xarray_regrid/regrid/index.html#xarray_regrid.regrid.Regridder.cubic>`_
+* `Zonal statistics <autoapi/xarray_regrid/regrid/index.html#xarray_regrid.regrid.Regridder.stat>`_
 * `"Most common value" (zonal statistics) <autoapi/xarray_regrid/regrid/index.html#xarray_regrid.regrid.Regridder.most_common>`_
+* `"Least common value" (zonal statistics) <autoapi/xarray_regrid/regrid/index.html#xarray_regrid.regrid.Regridder.least_common>`_
 
-Note that "Most common value" is designed to regrid categorical data to a coarse resolution. For regridding categorical data to a finer resolution, please use "nearest-neighbor" regridder.
+Note that "Most/least common value" is designed to regrid categorical data to a coarse resolution. For regridding categorical data to a finer resolution, please use "nearest-neighbor" regridder.
 
 For usage examples, please refer to the `quickstart guide <getting_started>`_ and the `example notebooks <notebooks/index>`_.
 
