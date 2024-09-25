@@ -1,6 +1,6 @@
 """Utility functions shared between methods."""
 
-from typing import overload
+from typing import Any, overload
 
 import numpy as np
 import pandas as pd
@@ -22,6 +22,7 @@ def restore_properties(
     original_data: xr.DataArray | xr.Dataset,
     target_ds: xr.Dataset,
     coords: list[str],
+    fill_value: Any,
 ) -> xr.DataArray: ...
 
 
@@ -31,6 +32,7 @@ def restore_properties(
     original_data: xr.DataArray | xr.Dataset,
     target_ds: xr.Dataset,
     coords: list[str],
+    fill_value: Any,
 ) -> xr.Dataset: ...
 
 
@@ -39,6 +41,7 @@ def restore_properties(
     original_data: xr.DataArray | xr.Dataset,
     target_ds: xr.Dataset,
     coords: list[str],
+    fill_value: Any,
 ) -> xr.DataArray | xr.Dataset:
     """Restore coord names, copy values and attributes of target, & add NaN padding."""
     result.attrs = original_data.attrs
@@ -52,7 +55,10 @@ def restore_properties(
         uncovered_target_grid = (target_ds[coord] <= original_data[coord].max()) & (
             target_ds[coord] >= original_data[coord].min()
         )
-        result = result.where(uncovered_target_grid)
+        if fill_value is None:
+            result = result.where(uncovered_target_grid)
+        else:
+            result = result.where(uncovered_target_grid, fill_value)
 
     return result.transpose(*original_data.dims)
 

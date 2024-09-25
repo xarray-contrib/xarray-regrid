@@ -1,6 +1,6 @@
 """Implementation of flox reduction based regridding methods."""
 
-from typing import overload
+from typing import Any, overload
 
 import flox.xarray
 import numpy as np
@@ -22,6 +22,7 @@ def statistic_reduce(
     time_dim: str | None,
     method: str,
     skipna: bool = False,
+    fill_value: None | Any = None,
 ) -> xr.DataArray: ...
 
 
@@ -32,6 +33,7 @@ def statistic_reduce(
     time_dim: str | None,
     method: str,
     skipna: bool = False,
+    fill_value: None | Any = None,
 ) -> xr.Dataset: ...
 
 
@@ -41,6 +43,7 @@ def statistic_reduce(
     time_dim: str | None,
     method: str,
     skipna: bool = False,
+    fill_value: None | Any = None,
 ) -> xr.DataArray | xr.Dataset:
     """Upsampling of data using statistical methods (e.g. the mean or variance).
 
@@ -56,37 +59,39 @@ def statistic_reduce(
         method: One of the following reduction methods: "sum", "mean", "var", "std",
             or "median.
         skipna: If NaN values should be ignored.
+        fill_value: What value to fill uncovered parts of the target grid. By default
+            this will be NaN, and integer type data will be cast to float to accomodate
+            this.
 
     Returns:
         xarray.dataset with regridded land cover categorical data.
     """
-    valid_methods = ["sum", "mean", "var", "std", "median"]
+    valid_methods = ["sum", "mean", "var", "std", "median", "max", "min"]
     if method not in valid_methods:
         msg = f"Invalid method. Please choose from '{valid_methods}'."
         raise ValueError(msg)
 
-    if skipna:
-        method = "nan" + method
-
     coords = utils.common_coords(data, target_ds, remove_coord=time_dim)
-    target_ds_sorted = target_ds.sortby(list(coords))
+    ds_coords = xr.Dataset(target_ds.coords)  # coords target coords for reindexing
+    target_ds = utils.ensure_monotonic(target_ds, coords)
 
     bounds = tuple(
-        construct_intervals(target_ds_sorted[coord].to_numpy()) for coord in coords
+        construct_intervals(target_ds[coord].to_numpy()) for coord in coords
     )
 
-    data = reduce_data_to_new_domain(data, target_ds_sorted, coords)
+    data = reduce_data_to_new_domain(data, target_ds, coords)
 
     result: xr.Dataset = flox.xarray.xarray_reduce(
-        data.compute(),
+        data,
         *coords,
         func=method,
         expected_groups=bounds,
         skipna=skipna,
+        fill_value=fill_value,
     )
 
-    result = restore_properties(result, data, target_ds_sorted, coords)
-    result = result.reindex_like(target_ds, copy=False)
+    result = restore_properties(result, data, target_ds, coords, fill_value)
+    result = result.reindex_like(ds_coords, copy=False)
     return result
 
 
@@ -115,6 +120,7 @@ def get_most_common_value(
     expected_groups: np.ndarray,
     time_dim: str | None,
     inverse: bool = False,
+    fill_value: None | Any = None
 ) -> xr.DataArray:
     """Upsample the input data using a "most common label" (mode) approach.
 
@@ -128,6 +134,9 @@ def get_most_common_value(
         time_dim: Name of the time dimension. Defaults to "time". Use `None` to force
             regridding over the time dimension.
         inverse: Find the least-common-value (anti-mode).
+        fill_value: What value to fill uncovered parts of the target grid. By default
+            this will be NaN, and integer type data will be cast to float to accomodate
+            this.
 
     Raises:
         ValueError: if the input data is not of an integer dtype.
@@ -147,6 +156,7 @@ def get_most_common_value(
         raise ValueError(msg)
 
     coords = utils.common_coords(data, target_ds, remove_coord=time_dim)
+    ds_coords = xr.Dataset(target_ds.coords)  # stores coords for reindexing later
     target_ds_sorted = target_ds.sortby(list(coords))
 
     bounds = tuple(
@@ -169,6 +179,6 @@ def get_most_common_value(
     )
     result = result.idxmax(array_name) if not inverse else result.idxmin(array_name)
 
-    result = restore_properties(result, data, target_ds_sorted, coords)
-    result = result.reindex_like(target_ds, copy=False)
+    result = restore_properties(result, data, target_ds_sorted, coords, fill_value)
+    result = result.reindex_like(ds_coords, copy=False)
     return result

@@ -1,6 +1,6 @@
 from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Any, overload
+from typing import Any, Hashable, overload
 
 import numpy as np
 import pandas as pd
@@ -235,3 +235,32 @@ def call_on_dataset(
         return next(iter(result.data_vars.values())).rename(obj.name)
 
     return result
+
+
+@overload
+def ensure_monotonic(
+    obj: xr.Dataset, coords: list[Hashable]
+) -> xr.Dataset: ...
+
+@overload
+def ensure_monotonic(
+    obj: xr.DataArray, coords: list[Hashable]
+) -> xr.DataArray: ...
+
+def ensure_monotonic(
+    obj: xr.Dataset | xr.DataArray, coords: list[Hashable]
+) -> xr.Dataset | xr.DataArray:
+    """Sort coordinates that do not monotonically increase.
+
+    If no sorting needs to take place, the data is not sorted."""
+    unsorted_coords = [
+        coord for coord in coords if not obj.indexes[coord].is_monotonic_increasing
+    ]
+    if len(unsorted_coords) > 0:
+        obj = obj.sortby(unsorted_coords)
+
+    duplicate_coords = [coord for coord in coords if not obj.indexes[coord].is_unique]
+    if len(duplicate_coords) > 0:
+        obj = obj.drop_duplicates(duplicate_coords)
+
+    return obj
