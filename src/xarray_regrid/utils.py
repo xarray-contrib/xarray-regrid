@@ -190,12 +190,12 @@ def common_coords(
     data1: xr.DataArray | xr.Dataset,
     data2: xr.DataArray | xr.Dataset,
     remove_coord: str | None = None,
-) -> list[str]:
+) -> list[Hashable]:
     """Return a set of coords which two dataset/arrays have in common."""
     coords = set(data1.coords).intersection(set(data2.coords))
     if remove_coord in coords:
         coords.remove(remove_coord)
-    return sorted([str(coord) for coord in coords])
+    return list(coords)
 
 
 def call_on_dataset(

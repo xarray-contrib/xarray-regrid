@@ -1,5 +1,6 @@
 """Utility functions shared between methods."""
 
+from collections.abc import Hashable
 from typing import Any, overload
 
 import numpy as np
@@ -21,7 +22,7 @@ def restore_properties(
     result: xr.DataArray,
     original_data: xr.DataArray | xr.Dataset,
     target_ds: xr.Dataset,
-    coords: list[str],
+    coords: list[Hashable],
     fill_value: Any,
 ) -> xr.DataArray: ...
 
@@ -31,7 +32,7 @@ def restore_properties(
     result: xr.Dataset,
     original_data: xr.DataArray | xr.Dataset,
     target_ds: xr.Dataset,
-    coords: list[str],
+    coords: list[Hashable],
     fill_value: Any,
 ) -> xr.Dataset: ...
 
@@ -40,7 +41,7 @@ def restore_properties(
     result: xr.DataArray | xr.Dataset,
     original_data: xr.DataArray | xr.Dataset,
     target_ds: xr.Dataset,
-    coords: list[str],
+    coords: list[Hashable],
     fill_value: Any,
 ) -> xr.DataArray | xr.Dataset:
     """Restore coord names, copy values and attributes of target, & add NaN padding."""
@@ -67,7 +68,7 @@ def restore_properties(
 def reduce_data_to_new_domain(
     data: xr.DataArray,
     target_ds: xr.Dataset,
-    coords: list[str],
+    coords: list[Hashable],
 ) -> xr.DataArray: ...
 
 
@@ -75,17 +76,17 @@ def reduce_data_to_new_domain(
 def reduce_data_to_new_domain(
     data: xr.Dataset,
     target_ds: xr.Dataset,
-    coords: list[str],
+    coords: list[Hashable],
 ) -> xr.Dataset: ...
 
 
 def reduce_data_to_new_domain(
     data: xr.DataArray | xr.Dataset,
     target_ds: xr.Dataset,
-    coords: list[str],
+    coords: list[Hashable],
 ) -> xr.DataArray | xr.Dataset:
     """Slice the input data to bounds of the target dataset, to reduce computations."""
-    data = data.sortby(list(coords))
+    data = data.sortby(coords)
     for coord in coords:
         coord_res = np.median(np.diff(target_ds[coord].to_numpy(), 1))
         data = data.sel(
