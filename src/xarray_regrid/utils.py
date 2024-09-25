@@ -225,30 +225,11 @@ def call_on_dataset(
 
 
 @overload
-def ensure_all_monotonic(obj: xr.Dataset, coords: list[Hashable]) -> xr.Dataset: ...
+def format_for_regrid(obj: xr.Dataset, target: xr.Dataset) -> xr.Dataset: ...
 
 
 @overload
-def ensure_all_monotonic(obj: xr.DataArray, coords: list[Hashable]) -> xr.DataArray: ...
-
-
-def ensure_all_monotonic(
-    obj: xr.Dataset | xr.DataArray, coords: list[Hashable]
-) -> xr.Dataset | xr.DataArray:
-    """Sort coordinates that do not monotonically increase.
-
-    If no sorting needs to take place, the data is not sorted."""
-    unsorted_coords = [
-        coord for coord in coords if not obj.indexes[coord].is_monotonic_increasing
-    ]
-    if len(unsorted_coords) > 0:
-        obj = obj.sortby(unsorted_coords)
-
-    duplicate_coords = [coord for coord in coords if not obj.indexes[coord].is_unique]
-    if len(duplicate_coords) > 0:
-        obj = obj.drop_duplicates(duplicate_coords)
-
-    return obj
+def format_for_regrid(obj: xr.DataArray, target: xr.Dataset) -> xr.DataArray: ...
 
 
 def format_for_regrid(

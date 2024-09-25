@@ -72,12 +72,12 @@ def statistic_reduce(
         raise ValueError(msg)
 
     coords = utils.common_coords(data, target_ds, remove_coord=time_dim)
-    ds_coords = xr.Dataset(target_ds.coords)  # coords target coords for reindexing
-    target_ds = utils.ensure_all_monotonic(target_ds, coords)
+    target_coords = xr.Dataset(target_ds.coords)  # coords target coords for reindexing
+    sorted_target_coords = target_coords.sortby(coords)
 
-    bounds = tuple(construct_intervals(target_ds[coord].to_numpy()) for coord in coords)
+    bounds = tuple(construct_intervals(sorted_target_coords[coord].to_numpy()) for coord in coords)
 
-    data = reduce_data_to_new_domain(data, target_ds, coords)
+    data = reduce_data_to_new_domain(data, sorted_target_coords, coords)
 
     result: xr.Dataset = flox.xarray.xarray_reduce(
         data,
@@ -89,7 +89,7 @@ def statistic_reduce(
     )
 
     result = restore_properties(result, data, target_ds, coords, fill_value)
-    result = result.reindex_like(ds_coords, copy=False)
+    result = result.reindex_like(target_coords, copy=False)
     return result
 
 
@@ -112,13 +112,13 @@ def find_matching_int_dtype(
     return np.int64
 
 
-def get_most_common_value(
+def compute_mode(
     data: xr.DataArray,
     target_ds: xr.Dataset,
     expected_groups: np.ndarray,
     time_dim: str | None,
-    inverse: bool = False,
     fill_value: None | Any = None,
+    anti_mode: bool = False,
 ) -> xr.DataArray:
     """Upsample the input data using a "most common label" (mode) approach.
 
@@ -131,10 +131,10 @@ def get_most_common_value(
             values 0, 2 and 4.
         time_dim: Name of the time dimension. Defaults to "time". Use `None` to force
             regridding over the time dimension.
-        inverse: Find the least-common-value (anti-mode).
         fill_value: What value to fill uncovered parts of the target grid. By default
             this will be NaN, and integer type data will be cast to float to accomodate
             this.
+        anti_mode: Find the least-common-value (anti-mode).
 
     Raises:
         ValueError: if the input data is not of an integer dtype.
@@ -154,29 +154,24 @@ def get_most_common_value(
         raise ValueError(msg)
 
     coords = utils.common_coords(data, target_ds, remove_coord=time_dim)
-    ds_coords = xr.Dataset(target_ds.coords)  # stores coords for reindexing later
-    target_ds_sorted = target_ds.sortby(list(coords))
+    target_coords = xr.Dataset(target_ds.coords)  # stores coords for reindexing later
+    sorted_target_coords = target_coords.sortby(coords)
 
-    bounds = tuple(
-        construct_intervals(target_ds_sorted[coord].to_numpy()) for coord in coords
-    )
+    bounds = tuple(construct_intervals(sorted_target_coords[coord].to_numpy()) for coord in coords)
 
-    data = reduce_data_to_new_domain(data, target_ds_sorted, coords)
-
-    # Reduce memory usage by picking the most minimal integer type
-    dtype = find_matching_int_dtype(expected_groups)
+    data = reduce_data_to_new_domain(data, sorted_target_coords, coords)
 
     result: xr.DataArray = flox.xarray.xarray_reduce(
         xr.ones_like(data, dtype=bool),
-        data.astype(dtype),  # important, needs to be int
+        data,  # important, needs to be int
         *coords,
         dim=coords,
         func="count",
-        expected_groups=(pd.Index(expected_groups.astype(dtype)), *bounds),
+        expected_groups=(pd.Index(expected_groups.astype(data)), *bounds),
         fill_value=-1,
     )
-    result = result.idxmax(array_name) if not inverse else result.idxmin(array_name)
+    result = result.idxmax(array_name) if not anti_mode else result.idxmin(array_name)
 
-    result = restore_properties(result, data, target_ds_sorted, coords, fill_value)
-    result = result.reindex_like(ds_coords, copy=False)
+    result = restore_properties(result, data, target_ds, coords, fill_value)
+    result = result.reindex_like(target_coords, copy=False)
     return result

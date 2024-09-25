@@ -102,6 +102,14 @@ def test_most_common(dummy_lc_data, dummy_target_grid):
     )
 
 
+def test_least_common(dummy_lc_data, dummy_target_grid):
+    # Currently just test if the method runs: code is 99% the same as most_common
+    dummy_lc_data["lc"].regrid.least_common(
+        dummy_target_grid,
+        expected_groups=EXP_LABELS,
+    )
+
+
 def test_oversized_most_common(dummy_lc_data, oversized_dummy_target_grid):
     expected_data = np.array(
         [
