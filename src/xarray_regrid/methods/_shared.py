@@ -86,7 +86,6 @@ def reduce_data_to_new_domain(
     coords: list[Hashable],
 ) -> xr.DataArray | xr.Dataset:
     """Slice the input data to bounds of the target dataset, to reduce computations."""
-    data = data.sortby(coords)
     for coord in coords:
         coord_res = np.median(np.diff(target_ds[coord].to_numpy(), 1))
         data = data.sel(

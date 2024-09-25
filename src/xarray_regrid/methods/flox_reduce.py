@@ -53,6 +53,7 @@ def statistic_reduce(
 
     Args:
         data: Input dataset.
+            It is assumed that the coordinates of this data are sorted.
         target_ds: Dataset which coordinates the input dataset should be regrid to.
         time_dim: Name of the time dimension. Defaults to "time". Use `None` to force
             regridding over the time dimension.
@@ -125,6 +126,7 @@ def compute_mode(
     Args:
         data: Input DataArray, with an integer data type. If your data does not consist
             of integer type values, you will have to encode them to integer types.
+            It is assumed that the coordinates of this data are sorted.
         target_ds: Dataset which coordinates the input dataset should be regrid to.
         values: Numpy array containing all labels expected to be in the input
             data. For example, `np.array([0, 2, 4])`, if the data only contains the
