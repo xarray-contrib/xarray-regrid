@@ -1,3 +1,4 @@
+from collections.abc import Hashable
 from typing import overload
 
 import numpy as np
@@ -86,7 +87,8 @@ class Regridder:
         latitude_coord: str | None = None,
         time_dim: str | None = "time",
         skipna: bool = True,
-        nan_threshold: float = 0.0,
+        nan_threshold: float = 1.0,
+        output_chunks: dict[Hashable, int] | None = None,
     ) -> xr.DataArray | xr.Dataset:
         """Regrid to the coords of the target dataset with a conservative scheme.
 
@@ -94,21 +96,20 @@ class Regridder:
             ds_target_grid: Dataset containing the target coordinates.
             latitude_coord: Name of the latitude coord, to be used for applying the
                 spherical correction. By default, attempt to infer a latitude coordinate
-                as anything starting with "lat".
+                as either "latitude" or "lat".
             time_dim: Name of the time dimension. Defaults to "time". Use `None` to
                 force regridding over the time dimension.
-            skipna: If True, enable handling for NaN values. This adds some overhead,
-                so can be disabled for optimal performance on data without any NaNs.
-                With `skipna=True, chunking is recommended in the non-grid dimensions,
-                otherwise the intermediate arrays that track the fraction of valid data
-                can become very large and consume excessive memory.
-                Warning: with `skipna=False`, isolated NaNs will propagate throughout
-                the dataset due to the sequential regridding scheme over each dimension.
+            skipna: If True, enable handling for NaN values. This adds only a small
+                amount of overhead, but can be disabled for optimal performance on data
+                without any NaNs.
             nan_threshold: Threshold value that will retain any output points
                 containing at least this many non-null input points. The default value
                 is 1.0, which will keep output points containing any non-null inputs,
                 while a value of 0.0 will only keep output points where all inputs are
                 non-null.
+            output_chunks: Optional dictionary of explicit chunk sizes for the output
+                data. If not provided, the output will be chunked the same as the input
+                data.
 
         Returns:
             Data regridded to the target dataset coordinates.
@@ -120,7 +121,12 @@ class Regridder:
         ds_target_grid = validate_input(self._obj, ds_target_grid, time_dim)
         ds_formatted = format_for_regrid(self._obj, ds_target_grid)
         return conservative.conservative_regrid(
-            ds_formatted, ds_target_grid, latitude_coord, skipna, nan_threshold
+            ds_formatted,
+            ds_target_grid,
+            latitude_coord,
+            skipna,
+            nan_threshold,
+            output_chunks,
         )
 
     def most_common(

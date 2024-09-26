@@ -208,6 +208,29 @@ def test_conservative_nan_thresholds_against_coarsen(nan_threshold):
     xr.testing.assert_allclose(da_coarsen, da_regrid)
 
 
+def test_conservative_output_chunks():
+    data = xr.DataArray(
+        np.ones((8, 8)),
+        coords={"x": np.linspace(0, 1, 8), "y": np.linspace(0, 1, 8)},
+        dims=("x", "y"),
+    )
+    target = xr.Dataset(coords={"x": np.linspace(0, 1, 4), "y": np.linspace(0, 1, 4)})
+
+    # Non-dask input should return non-dask output
+    result = data.regrid.conservative(target)
+    assert result.chunks is None
+
+    # Dask input with unspecified output chunks should match the input chunks
+    result = data.chunk({"x": 2, "y": 2}).regrid.conservative(target)
+    assert result.chunks == ((2, 2), (2, 2))
+
+    # Specified output chunks should be respected
+    result = data.chunk({"x": 4, "y": 4}).regrid.conservative(
+        target, output_chunks={"x": 2, "y": 2}
+    )
+    assert result.chunks == ((2, 2), (2, 2))
+
+
 @pytest.mark.skipif(xesmf is None, reason="xesmf required")
 def test_conservative_nan_thresholds_against_xesmf():
     ds = xr.tutorial.open_dataset("ersstv5").sst.isel(time=[0]).compute()
