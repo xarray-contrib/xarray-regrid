@@ -13,8 +13,6 @@ except ImportError:
 
 from xarray_regrid import utils
 
-EMPTY_DA_NAME = "FRAC_EMPTY"
-
 
 @overload
 def conservative_regrid(
@@ -23,6 +21,7 @@ def conservative_regrid(
     latitude_coord: str | None,
     skipna: bool = True,
     nan_threshold: float = 1.0,
+    output_chunks: dict[Hashable, int] | None = None,
 ) -> xr.DataArray: ...
 
 
@@ -33,6 +32,7 @@ def conservative_regrid(
     latitude_coord: str | None,
     skipna: bool = True,
     nan_threshold: float = 1.0,
+    output_chunks: dict[Hashable, int] | None = None,
 ) -> xr.Dataset: ...
 
 
@@ -42,6 +42,7 @@ def conservative_regrid(
     latitude_coord: str | Hashable | None,
     skipna: bool = True,
     nan_threshold: float = 1.0,
+    output_chunks: dict[Hashable, int] | None = None,
 ) -> xr.DataArray | xr.Dataset:
     """Refine a dataset using conservative regridding.
 
@@ -64,6 +65,8 @@ def conservative_regrid(
             which will keep output points containing any non-null inputs. The threshold
             is applied sequentially to each dimension, and may produce different results
             than a threshold applied concurrently to all regridding dimensions.
+        output_chunks: Optional dictionary of explicit chunk sizes for the output data.
+            If not provided, the output will be chunked the same as the input data.
 
     Returns:
         Regridded input dataset
@@ -90,6 +93,7 @@ def conservative_regrid(
         latitude_coord,
         skipna,
         nan_threshold,
+        output_chunks,
     )
 
     regridded_data = regridded_data.reindex_like(target_ds, copy=False)
@@ -103,17 +107,20 @@ def conservative_regrid_dataset(
     latitude_coord: Hashable,
     skipna: bool,
     nan_threshold: float,
+    output_chunks: dict[Hashable, int] | None = None,
 ) -> xr.Dataset:
     """Dataset implementation of the conservative regridding method."""
     data_vars = dict(data.data_vars)
     data_coords = dict(data.coords)
-    valid_fracs = {v: xr.DataArray(name=EMPTY_DA_NAME) for v in data_vars}
     data_attrs = {v: data_vars[v].attrs for v in data_vars}
     coord_attrs = {c: data_coords[c].attrs for c in data_coords}
     ds_attrs = data.attrs
 
+    # Create weights array and coverage mask for each regridding dim
+    weights = {}
+    covered = {}
     for coord in coords:
-        covered_grid = (coords[coord] <= data[coord].max()) & (
+        covered[coord] = (coords[coord] <= data[coord].max()) & (
             coords[coord] >= data[coord].min()
         )
 
@@ -121,36 +128,42 @@ def conservative_regrid_dataset(
         source_coords = data[coord].to_numpy()
         nd_weights = get_weights(source_coords, target_coords)
 
-        # Modify weights to correct for latitude distortion
-        weights = utils.create_dot_dataarray(
+        da_weights = utils.create_dot_dataarray(
             nd_weights, str(coord), target_coords, source_coords
         )
+        # Modify weights to correct for latitude distortion
         if coord == latitude_coord:
-            weights = apply_spherical_correction(weights, latitude_coord)
+            da_weights = apply_spherical_correction(da_weights, latitude_coord)
+        weights[coord] = da_weights
 
-        for array in data_vars.keys():
-            if coord in data_vars[array].dims:
-                if sparse is not None:
-                    var_weights = sparsify_weights(weights, data_vars[array])
-                else:
-                    var_weights = weights
+    # Apply the weights, using a unique set that matches chunking of each array
+    for array in data_vars.keys():
+        var_weights = {}
+        for coord, weight_array in weights.items():
+            var_input_chunks = data_vars[array].chunksizes.get(coord)
+            var_output_chunks = output_chunks.get(coord) if output_chunks else None
+            var_weights[coord] = format_weights(
+                weight_array,
+                coord,
+                data_vars[array].dtype,
+                var_input_chunks,
+                var_output_chunks,
+            )
 
-                data_vars[array], valid_fracs[array] = apply_weights(
-                    da=data_vars[array],
-                    weights=var_weights,
-                    coord=coord,
-                    valid_frac=valid_fracs[array],
-                    skipna=skipna,
-                )
-                # Mask out any regridded points outside the original domain
-                data_vars[array] = data_vars[array].where(covered_grid)
+        data_vars[array] = apply_weights(
+            da=data_vars[array],
+            weights=var_weights,
+            skipna=skipna,
+            nan_threshold=nan_threshold,
+        )
+        # Mask out any regridded points outside the original domain
+        # Limit to dims present on this array otherwise .where broadcasts
+        var_covered = xr.DataArray(True)
+        for coord in var_weights.keys():
+            var_covered = var_covered & covered[coord]
+        data_vars[array] = data_vars[array].where(var_covered)
 
-    if skipna:
-        # Mask out any points that don't meet the nan threshold
-        valid_threshold = get_valid_threshold(nan_threshold)
-        for array, da in data_vars.items():
-            data_vars[array] = da.where(valid_fracs[array] >= valid_threshold)
-
+    # Rebuild the results ensuring we preserve attributes and other coordinates
     for array, attrs in data_attrs.items():
         data_vars[array].attrs = attrs
 
@@ -167,58 +180,32 @@ def conservative_regrid_dataset(
 
 def apply_weights(
     da: xr.DataArray,
-    weights: xr.DataArray,
-    coord: Hashable,
-    valid_frac: xr.DataArray,
+    weights: dict[Hashable, xr.DataArray],
     skipna: bool,
-) -> tuple[xr.DataArray, xr.DataArray]:
-    """Apply the weights to convert data to the new coordinates."""
-    coord_map = {f"target_{coord}": coord}
-    weights_norm = weights.copy()
+    nan_threshold: float,
+) -> xr.DataArray:
+    """Apply the weights over all regridding dimensions simultaneously with `xr.dot`."""
+    coords = list(weights.keys())
+    weight_arrays = list(weights.values())
 
     if skipna:
-        notnull = da.notnull()
-        # Renormalize the weights along this dim by the accumulated valid_frac
-        # along previous dimensions
-        if valid_frac.name != EMPTY_DA_NAME:
-            weights_norm = weights * (valid_frac / valid_frac.mean(dim=[coord])).fillna(
-                0
-            )
+        valid_frac = xr.dot(
+            da.notnull(), *weight_arrays, dim=list(weights.keys()), optimize=True
+        )
 
-    da_reduced: xr.DataArray = xr.dot(
-        da.fillna(0), weights_norm, dim=[coord], optimize=True
+    da_regrid: xr.DataArray = xr.dot(
+        da.fillna(0), *weight_arrays, dim=list(weights.keys()), optimize=True
     )
-    da_reduced = da_reduced.rename(coord_map).transpose(*da.dims)
 
     if skipna:
-        weights_valid_sum: xr.DataArray = xr.dot(
-            notnull, weights_norm, dim=[coord], optimize=True
-        )
-        weights_valid_sum = weights_valid_sum.rename(coord_map)
-        da_reduced /= weights_valid_sum.clip(1e-6, None)
+        da_regrid /= valid_frac
+        da_regrid = da_regrid.where(valid_frac >= get_valid_threshold(nan_threshold))
 
-        if valid_frac.name == EMPTY_DA_NAME:
-            # Begin tracking the valid fraction
-            valid_frac = weights_valid_sum
+    # Rename temporary coordinates and ensure original dimension order
+    coord_map = {f"target_{coord}": coord for coord in coords}
+    da_regrid = da_regrid.rename(coord_map).transpose(*da.dims)
 
-        else:
-            # Update the valid points on this dimension
-            valid_frac = xr.dot(valid_frac, weights, dim=[coord], optimize=True)
-            valid_frac = valid_frac.rename(coord_map)
-            valid_frac = valid_frac.clip(0, 1)
-
-    # In some cases, dot product of dask data and sparse weights fails
-    # to automatically densify, which prevents future conversion to numpy
-    if (
-        sparse is not None
-        and da_reduced.chunks
-        and isinstance(da_reduced.data._meta, sparse.COO)
-    ):
-        da_reduced.data = da_reduced.data.map_blocks(
-            lambda x: x.todense(), dtype=da_reduced.dtype
-        )
-
-    return da_reduced, valid_frac
+    return da_regrid
 
 
 def get_valid_threshold(nan_threshold: float) -> float:
@@ -273,15 +260,43 @@ def lat_weight(latitude: np.ndarray, latitude_res: float) -> np.ndarray:
     return h * dlat / (np.pi * 4)  # type: ignore
 
 
-def sparsify_weights(weights: xr.DataArray, da: xr.DataArray) -> xr.DataArray:
-    """Create a sparse version of the weights that matches the dtype and chunks
-    of the array to be regridded. Even though the weights can be constructed as
-    dense arrays, contraction is more efficient with sparse operations."""
-    new_weights = weights.copy().astype(da.dtype)
-    if da.chunks:
-        chunks = {k: v for k, v in da.chunksizes.items() if k in weights.dims}
-        new_weights.data = new_weights.chunk(chunks).data.map_blocks(sparse.COO)
-    else:
+def format_weights(
+    weights: xr.DataArray,
+    coord: Hashable,
+    input_dtype: np.dtype,
+    input_chunks: tuple[int, ...] | None,
+    output_chunks: tuple[int, ...] | int | None,
+) -> xr.DataArray:
+    """Format the raw weights array such that:
+
+    1. Weights match the dtype of the input data
+    1. Weights are chunked 1:1 with the source data
+    2. Weights are chunked as requested in the target grid. If no chunks are
+        provided, the same chunksize as the source grid will be used.
+        See: https://github.com/dask/dask/issues/2225
+    3. Weights are converted to a sparse representation (on a per chunk basis)
+        if the `sparse` package is available.
+    """
+    # Use single precision weights at minimum, double if input is double
+    weights_dtype = np.result_type(np.float32, input_dtype)
+    new_weights = weights.copy().astype(weights_dtype)
+
+    chunks: dict[Hashable, tuple[int, ...] | int] = {}
+    if input_chunks is not None:
+        chunks[coord] = input_chunks
+        if output_chunks is None:
+            # Set output chunking to match input, but precise chunks won't match shape,
+            # so take the max in case of uneven chunks
+            output_chunks = max(input_chunks)
+
+    if output_chunks is not None:
+        chunks[f"target_{coord}"] = output_chunks
+
+    if chunks:
+        new_weights = new_weights.chunk(chunks)
+        if sparse is not None:
+            new_weights.data = new_weights.data.map_blocks(sparse.COO)
+    elif sparse is not None:
         new_weights.data = sparse.COO(weights.data)
 
     return new_weights

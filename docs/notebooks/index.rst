@@ -13,6 +13,7 @@ Most notebooks compare the methods implemented in xarray-regrid against more sta
   benchmarks/benchmarking_bilinear.ipynb
   benchmarks/benchmarking_conservative.ipynb
   benchmarks/benchmarking_nearest.ipynb
+  benchmarks/benchmarking_xesmf.ipynb
 
 .. toctree::
   :maxdepth: 1
