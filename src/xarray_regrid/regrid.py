@@ -1,3 +1,4 @@
+from collections.abc import Hashable
 from typing import overload
 
 import numpy as np
@@ -87,6 +88,7 @@ class Regridder:
         time_dim: str | None = "time",
         skipna: bool = True,
         nan_threshold: float = 1.0,
+        output_chunks: dict[Hashable, int] | None = None,
     ) -> xr.DataArray | xr.Dataset:
         """Regrid to the coords of the target dataset with a conservative scheme.
 
@@ -105,6 +107,9 @@ class Regridder:
                 is 1.0, which will keep output points containing any non-null inputs,
                 while a value of 0.0 will only keep output points where all inputs are
                 non-null.
+            output_chunks: Optional dictionary of explicit chunk sizes for the output
+                data. If not provided, the output will be chunked the same as the input
+                data.
 
         Returns:
             Data regridded to the target dataset coordinates.
@@ -116,7 +121,12 @@ class Regridder:
         ds_target_grid = validate_input(self._obj, ds_target_grid, time_dim)
         ds_formatted = format_for_regrid(self._obj, ds_target_grid)
         return conservative.conservative_regrid(
-            ds_formatted, ds_target_grid, latitude_coord, skipna, nan_threshold
+            ds_formatted,
+            ds_target_grid,
+            latitude_coord,
+            skipna,
+            nan_threshold,
+            output_chunks,
         )
 
     def most_common(

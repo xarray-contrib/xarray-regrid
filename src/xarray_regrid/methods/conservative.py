@@ -21,6 +21,7 @@ def conservative_regrid(
     latitude_coord: str | None,
     skipna: bool = True,
     nan_threshold: float = 1.0,
+    output_chunks: dict[Hashable, int] | None = None,
 ) -> xr.DataArray: ...
 
 
@@ -31,6 +32,7 @@ def conservative_regrid(
     latitude_coord: str | None,
     skipna: bool = True,
     nan_threshold: float = 1.0,
+    output_chunks: dict[Hashable, int] | None = None,
 ) -> xr.Dataset: ...
 
 
@@ -40,6 +42,7 @@ def conservative_regrid(
     latitude_coord: str | Hashable | None,
     skipna: bool = True,
     nan_threshold: float = 1.0,
+    output_chunks: dict[Hashable, int] | None = None,
 ) -> xr.DataArray | xr.Dataset:
     """Refine a dataset using conservative regridding.
 
@@ -62,6 +65,8 @@ def conservative_regrid(
             which will keep output points containing any non-null inputs. The threshold
             is applied sequentially to each dimension, and may produce different results
             than a threshold applied concurrently to all regridding dimensions.
+        output_chunks: Optional dictionary of explicit chunk sizes for the output data.
+            If not provided, the output will be chunked the same as the input data.
 
     Returns:
         Regridded input dataset
@@ -88,6 +93,7 @@ def conservative_regrid(
         latitude_coord,
         skipna,
         nan_threshold,
+        output_chunks,
     )
 
     regridded_data = regridded_data.reindex_like(target_ds, copy=False)
@@ -101,6 +107,7 @@ def conservative_regrid_dataset(
     latitude_coord: Hashable,
     skipna: bool,
     nan_threshold: float,
+    output_chunks: dict[Hashable, int] | None = None,
 ) -> xr.Dataset:
     """Dataset implementation of the conservative regridding method."""
     data_vars = dict(data.data_vars)
@@ -133,10 +140,15 @@ def conservative_regrid_dataset(
     for array in data_vars.keys():
         var_weights = {}
         for coord, weight_array in weights.items():
-            if sparse is not None:
-                var_weights[coord] = sparsify_weights(weight_array, data_vars[array])
-            else:
-                var_weights[coord] = weight_array
+            var_input_chunks = data_vars[array].chunksizes.get(coord)
+            var_output_chunks = output_chunks.get(coord) if output_chunks else None
+            var_weights[coord] = format_weights(
+                weight_array,
+                coord,
+                data_vars[array].dtype,
+                var_input_chunks,
+                var_output_chunks,
+            )
 
         data_vars[array] = apply_weights(
             da=data_vars[array],
@@ -248,15 +260,43 @@ def lat_weight(latitude: np.ndarray, latitude_res: float) -> np.ndarray:
     return h * dlat / (np.pi * 4)  # type: ignore
 
 
-def sparsify_weights(weights: xr.DataArray, da: xr.DataArray) -> xr.DataArray:
-    """Create a sparse version of the weights that matches the dtype and chunks
-    of the array to be regridded. Even though the weights can be constructed as
-    dense arrays, contraction is more efficient with sparse operations."""
-    new_weights = weights.copy().astype(da.dtype)
-    if da.chunks:
-        chunks = {k: v for k, v in da.chunksizes.items() if k in weights.dims}
-        new_weights.data = new_weights.chunk(chunks).data.map_blocks(sparse.COO)
-    else:
+def format_weights(
+    weights: xr.DataArray,
+    coord: Hashable,
+    input_dtype: np.dtype,
+    input_chunks: tuple[int, ...] | None,
+    output_chunks: tuple[int, ...] | int | None,
+) -> xr.DataArray:
+    """Format the raw weights array such that:
+
+    1. Weights match the dtype of the input data
+    1. Weights are chunked 1:1 with the source data
+    2. Weights are chunked as requested in the target grid. If no chunks are
+        provided, the same chunksize as the source grid will be used.
+        See: https://github.com/dask/dask/issues/2225
+    3. Weights are converted to a sparse representation (on a per chunk basis)
+        if the `sparse` package is available.
+    """
+    # Use single precision weights at minimum, double if input is double
+    weights_dtype = np.result_type(np.float32, input_dtype)
+    new_weights = weights.copy().astype(weights_dtype)
+
+    chunks: dict[Hashable, tuple[int, ...] | int] = {}
+    if input_chunks is not None:
+        chunks[coord] = input_chunks
+        if output_chunks is None:
+            # Set output chunking to match input, but precise chunks won't match shape,
+            # so take the max in case of uneven chunks
+            output_chunks = max(input_chunks)
+
+    if output_chunks is not None:
+        chunks[f"target_{coord}"] = output_chunks
+
+    if chunks:
+        new_weights = new_weights.chunk(chunks)
+        if sparse is not None:
+            new_weights.data = new_weights.data.map_blocks(sparse.COO)
+    elif sparse is not None:
         new_weights.data = sparse.COO(weights.data)
 
     return new_weights
