@@ -24,7 +24,8 @@ def restore_properties(
     target_ds: xr.Dataset,
     coords: list[Hashable],
     fill_value: Any,
-) -> xr.DataArray: ...
+) -> xr.DataArray:
+    ...
 
 
 @overload
@@ -34,7 +35,8 @@ def restore_properties(
     target_ds: xr.Dataset,
     coords: list[Hashable],
     fill_value: Any,
-) -> xr.Dataset: ...
+) -> xr.Dataset:
+    ...
 
 
 def restore_properties(
@@ -71,7 +73,8 @@ def reduce_data_to_new_domain(
     data: xr.DataArray,
     target_ds: xr.Dataset,
     coords: list[Hashable],
-) -> xr.DataArray: ...
+) -> xr.DataArray:
+    ...
 
 
 @overload
@@ -79,7 +82,8 @@ def reduce_data_to_new_domain(
     data: xr.Dataset,
     target_ds: xr.Dataset,
     coords: list[Hashable],
-) -> xr.Dataset: ...
+) -> xr.Dataset:
+    ...
 
 
 def reduce_data_to_new_domain(
