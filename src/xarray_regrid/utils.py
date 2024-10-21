@@ -7,8 +7,7 @@ import pandas as pd
 import xarray as xr
 
 
-class InvalidBoundsError(Exception):
-    ...
+class InvalidBoundsError(Exception): ...
 
 
 class CoordHandler(TypedDict):
@@ -230,8 +229,7 @@ def format_for_regrid(
     obj: xr.Dataset,
     target: xr.Dataset,
     stats: bool = False,
-) -> xr.Dataset:
-    ...
+) -> xr.Dataset: ...
 
 
 @overload
@@ -239,8 +237,7 @@ def format_for_regrid(
     obj: xr.DataArray,
     target: xr.Dataset,
     stats: bool = False,
-) -> xr.DataArray:
-    ...
+) -> xr.DataArray: ...
 
 
 def format_for_regrid(
@@ -399,13 +396,11 @@ def coord_is_covered(
 
 
 @overload
-def ensure_monotonic(obj: xr.DataArray, coord: Hashable) -> xr.DataArray:
-    ...
+def ensure_monotonic(obj: xr.DataArray, coord: Hashable) -> xr.DataArray: ...
 
 
 @overload
-def ensure_monotonic(obj: xr.Dataset, coord: Hashable) -> xr.Dataset:
-    ...
+def ensure_monotonic(obj: xr.Dataset, coord: Hashable) -> xr.Dataset: ...
 
 
 def ensure_monotonic(
@@ -424,15 +419,13 @@ def ensure_monotonic(
 @overload
 def update_coord(
     obj: xr.DataArray, coord: Hashable, coord_vals: np.ndarray
-) -> xr.DataArray:
-    ...
+) -> xr.DataArray: ...
 
 
 @overload
 def update_coord(
     obj: xr.Dataset, coord: Hashable, coord_vals: np.ndarray
-) -> xr.Dataset:
-    ...
+) -> xr.Dataset: ...
 
 
 def update_coord(

@@ -275,8 +275,7 @@ def validate_input(
     data: xr.Dataset,
     ds_target_grid: xr.Dataset,
     time_dim: str | None,
-) -> xr.Dataset:
-    ...
+) -> xr.Dataset: ...
 
 
 @overload
@@ -284,8 +283,7 @@ def validate_input(
     data: xr.DataArray,
     ds_target_grid: xr.Dataset,
     time_dim: str | None,
-) -> xr.Dataset:
-    ...
+) -> xr.Dataset: ...
 
 
 def validate_input(

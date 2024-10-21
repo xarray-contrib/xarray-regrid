@@ -22,8 +22,7 @@ def conservative_regrid(
     skipna: bool = True,
     nan_threshold: float = 1.0,
     output_chunks: dict[Hashable, int] | None = None,
-) -> xr.DataArray:
-    ...
+) -> xr.DataArray: ...
 
 
 @overload
@@ -34,8 +33,7 @@ def conservative_regrid(
     skipna: bool = True,
     nan_threshold: float = 1.0,
     output_chunks: dict[Hashable, int] | None = None,
-) -> xr.Dataset:
-    ...
+) -> xr.Dataset: ...
 
 
 def conservative_regrid(
