@@ -1,5 +1,6 @@
 """Utility functions shared between methods."""
 
+import warnings
 from collections.abc import Hashable
 from typing import Any, overload
 
@@ -61,6 +62,12 @@ def restore_properties(
 
         if (~covered).any():
             if fill_value is None:
+                if np.issubdtype(result.dtype, np.integer):
+                    msg = (
+                        "No fill_value is provided; data will be cast to "
+                        "floating point dtype to be able to use NaN for missing values."
+                    )
+                    warnings.warn(msg, stacklevel=1)
                 result = result.where(covered)
             else:
                 result = result.where(covered, fill_value)
