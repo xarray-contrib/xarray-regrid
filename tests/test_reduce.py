@@ -93,15 +93,21 @@ def test_most_common(dummy_lc_data, dummy_target_grid):
             [0, 0, 0, 0, 0, 0],
             [0, 0, 0, 0, 0, 0],
             [3, 3, 0, 0, 0, 1],
-        ]
+        ],
+        dtype="uint8",
+    )
+    input_data_int = dummy_lc_data["lc"].astype("uint8")
+
+    regrid_result = input_data_int.regrid.most_common(
+        dummy_target_grid,
+        values=EXP_LABELS,
     )
     xr.testing.assert_equal(
-        dummy_lc_data["lc"].regrid.most_common(
-            dummy_target_grid,
-            values=EXP_LABELS,
-        ),
+        regrid_result,
         make_expected_ds(expected_data)["lc"],
     )
+
+    assert regrid_result.dtype == input_data_int.dtype
 
 
 def test_least_common(dummy_lc_data, dummy_target_grid):
