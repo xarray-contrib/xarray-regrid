@@ -53,13 +53,15 @@ def restore_properties(
         result[coord].attrs = target_ds[coord].attrs
 
         # Replace zeros outside of original data grid with NaNs
-        uncovered_target_grid = (target_ds[coord] <= original_data[coord].max()) & (
+        covered = (target_ds[coord] <= original_data[coord].max()) & (
             target_ds[coord] >= original_data[coord].min()
         )
-        if fill_value is None:
-            result = result.where(uncovered_target_grid)
-        else:
-            result = result.where(uncovered_target_grid, fill_value)
+
+        if (~covered).any():
+            if fill_value is None:
+                result = result.where(covered)
+            else:
+                result = result.where(covered, fill_value)
 
     return result.transpose(*original_data.dims)
 
