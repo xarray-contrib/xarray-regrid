@@ -240,6 +240,7 @@ class Regridder:
         method: str,
         time_dim: str | None = "time",
         skipna: bool = False,
+        fill_value: None | Any = None,
     ) -> xr.DataArray | xr.Dataset:
         """Upsampling of data using statistical methods (e.g. the mean or variance).
 
@@ -254,6 +255,9 @@ class Regridder:
             time_dim: Name of the time dimension. Defaults to "time". Use `None` to
                 force regridding over the time dimension.
             skipna: If NaN values should be ignored.
+            fill_value: What value to fill uncovered parts of the target grid.
+                By default this will be NaN, and integer type data will be cast to
+                float to accomodate this.
 
         Returns:
             xarray.dataset with regridded land cover categorical data.
@@ -262,7 +266,7 @@ class Regridder:
         ds_formatted = format_for_regrid(self._obj, ds_target_grid, stats=True)
 
         return flox_reduce.statistic_reduce(
-            ds_formatted, ds_target_grid, time_dim, method, skipna
+            ds_formatted, ds_target_grid, time_dim, method, skipna, fill_value
         )
 
 
@@ -271,7 +275,8 @@ def validate_input(
     data: xr.Dataset,
     ds_target_grid: xr.Dataset,
     time_dim: str | None,
-) -> xr.Dataset: ...
+) -> xr.Dataset:
+    ...
 
 
 @overload
@@ -279,7 +284,8 @@ def validate_input(
     data: xr.DataArray,
     ds_target_grid: xr.Dataset,
     time_dim: str | None,
-) -> xr.Dataset: ...
+) -> xr.Dataset:
+    ...
 
 
 def validate_input(
