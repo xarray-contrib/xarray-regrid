@@ -1,5 +1,5 @@
 from collections.abc import Hashable
-from typing import overload
+from typing import Any, overload
 
 import numpy as np
 import xarray as xr
@@ -14,11 +14,12 @@ class Regridder:
     """Regridding xarray datasets and dataarrays.
 
     Available methods:
-        linear: linear, bilinear, or higher dimensional linear interpolation.
-        nearest: nearest-neighbor regridding.
-        cubic: cubic spline regridding.
-        conservative: conservative regridding.
+        linear: linear, bilinear, or higher dimensional linear interpolation
+        nearest: nearest-neighbor regridding
+        cubic: cubic spline regridding
+        conservative: conservative regridding
         most_common: most common value regridder
+        stat: area statistics regridder
     """
 
     def __init__(self, xarray_obj: xr.DataArray | xr.Dataset):
@@ -134,6 +135,7 @@ class Regridder:
         ds_target_grid: xr.Dataset,
         values: np.ndarray,
         time_dim: str | None = "time",
+        fill_value: None | Any = None,
     ) -> xr.DataArray:
         """Regrid by taking the most common value within the new grid cells.
 
@@ -151,6 +153,9 @@ class Regridder:
                 contains the values 0, 2 and 4.
             time_dim: Name of the time dimension. Defaults to "time". Use `None` to
                 force regridding over the time dimension.
+            fill_value: What value to fill uncovered parts of the target grid.
+                By default this will be NaN, and integer type data will be cast to
+                float to accomodate this.
 
         Returns:
             Regridded data.
@@ -173,6 +178,7 @@ class Regridder:
             ds_target_grid,
             values,
             time_dim,
+            fill_value,
             anti_mode=False,
         )
 
@@ -181,6 +187,7 @@ class Regridder:
         ds_target_grid: xr.Dataset,
         values: np.ndarray,
         time_dim: str | None = "time",
+        fill_value: None | Any = None,
     ) -> xr.DataArray:
         """Regrid by taking the least common value within the new grid cells.
 
@@ -198,6 +205,9 @@ class Regridder:
                 contains the values 0, 2 and 4.
             time_dim: Name of the time dimension. Defaults to "time". Use `None` to
                 force regridding over the time dimension.
+            fill_value: What value to fill uncovered parts of the target grid.
+                By default this will be NaN, and integer type data will be cast to
+                float to accomodate this.
 
         Returns:
             Regridded data.
@@ -220,6 +230,7 @@ class Regridder:
             ds_target_grid,
             values,
             time_dim,
+            fill_value,
             anti_mode=True,
         )
 
@@ -229,6 +240,7 @@ class Regridder:
         method: str,
         time_dim: str | None = "time",
         skipna: bool = False,
+        fill_value: None | Any = None,
     ) -> xr.DataArray | xr.Dataset:
         """Upsampling of data using statistical methods (e.g. the mean or variance).
 
@@ -243,6 +255,9 @@ class Regridder:
             time_dim: Name of the time dimension. Defaults to "time". Use `None` to
                 force regridding over the time dimension.
             skipna: If NaN values should be ignored.
+            fill_value: What value to fill uncovered parts of the target grid.
+                By default this will be NaN, and integer type data will be cast to
+                float to accomodate this.
 
         Returns:
             xarray.dataset with regridded land cover categorical data.
@@ -251,7 +266,7 @@ class Regridder:
         ds_formatted = format_for_regrid(self._obj, ds_target_grid, stats=True)
 
         return flox_reduce.statistic_reduce(
-            ds_formatted, ds_target_grid, time_dim, method, skipna
+            ds_formatted, ds_target_grid, time_dim, method, skipna, fill_value
         )
 
 
