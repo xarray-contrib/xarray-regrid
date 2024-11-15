@@ -21,6 +21,11 @@ authors:
   - given-names: Sam
     family-names: Levang
     affiliation: Salient Predictions
+  - given-names: Ben
+    family-names: Mares
+    orcid: 'https://orcid.org/0000-0002-1036-0793'
+    affiliation: Tensorial (EI Bernard Mares)
+    email: services-xarray-regrid@tensorial.com
 
 repository-code: 'https://github.com/EXCITED-CO2/xarray-regrid'
 keywords:

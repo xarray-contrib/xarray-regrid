@@ -316,7 +316,7 @@ def format_lat(
     if dy - polar_lat >= obj.coords[lat_coord].values[0] > -polar_lat:
         south_pole = obj.isel({lat_coord: 0})
         if lon_coord is not None:
-            south_pole = south_pole.mean(lon_coord)
+            south_pole = south_pole.mean(lon_coord, keep_attrs=True)
         obj = xr.concat([south_pole, obj], dim=lat_coord)  # type: ignore
         lat_vals = np.concatenate([[-polar_lat], lat_vals])
 
@@ -324,7 +324,7 @@ def format_lat(
     if polar_lat - dy <= obj.coords[lat_coord].values[-1] < polar_lat:
         north_pole = obj.isel({lat_coord: -1})
         if lon_coord is not None:
-            north_pole = north_pole.mean(lon_coord)
+            north_pole = north_pole.mean(lon_coord, keep_attrs=True)
         obj = xr.concat([obj, north_pole], dim=lat_coord)  # type: ignore
         lat_vals = np.concatenate([lat_vals, [polar_lat]])
 
