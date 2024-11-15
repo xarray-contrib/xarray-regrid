@@ -6,6 +6,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## Unreleased
 
+Fixed:
+ - Attributes are now properly preserved when updating coordinates during pre-formatting for regridding ([#54](https://github.com/xarray-contrib/xarray-regrid/pull/54)).
+
 
 ## 0.4.0 (2024-09-26)
 
