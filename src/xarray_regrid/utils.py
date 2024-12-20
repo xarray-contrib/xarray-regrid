@@ -249,8 +249,6 @@ def format_for_regrid(
     Currently handles padding of spherical geometry if lat/lon coordinates can
     be inferred and the domain size requires boundary padding.
     """
-    orig_chunksizes = obj.chunksizes
-
     # Special-cased coordinates with accepted names and formatting function
     coord_handlers: dict[str, CoordHandler] = {
         "lat": {"names": ["lat", "latitude"], "func": format_lat},
@@ -270,15 +268,22 @@ def format_for_regrid(
                 formatted_coords[coord_type] = str(coord)
 
     # Apply formatting
+    result = obj.copy()
     for coord_type, coord in formatted_coords.items():
         # Make sure formatted coords are sorted
-        obj = ensure_monotonic(obj, coord)
+        result = ensure_monotonic(result, coord)
         target = ensure_monotonic(target, coord)
-        obj = coord_handlers[coord_type]["func"](obj, target, formatted_coords)
+        result = coord_handlers[coord_type]["func"](result, target, formatted_coords)
+
         # Coerce back to a single chunk if that's what was passed
-        if len(orig_chunksizes.get(coord, [])) == 1:
-            obj = obj.chunk({coord: -1})
-    return obj
+        if isinstance(obj, xr.DataArray) and len(obj.chunksizes.get(coord, ())) == 1:
+            result = result.chunk({coord: -1})
+        elif isinstance(obj, xr.Dataset):
+            for var in result.data_vars:
+                if len(obj[var].chunksizes.get(coord, ())) == 1:
+                    result[var] = result[var].chunk({coord: -1})
+
+    return result
 
 
 def format_lat(

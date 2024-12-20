@@ -216,3 +216,40 @@ def test_stats():
     # And preserve integer dtypes
     assert formatted.data.dtype == source.data.dtype
     assert (formatted.longitude.diff("longitude") == 1).all()
+
+
+def test_maintain_single_chunk():
+    dx_source = 2
+    source = xarray_regrid.Grid(
+        north=90 - dx_source / 2,
+        east=360 - dx_source / 2,
+        south=-90 + dx_source / 2,
+        west=0 + dx_source / 2,
+        resolution_lat=dx_source,
+        resolution_lon=dx_source,
+    ).create_regridding_dataset()
+    source["a"] = xr.DataArray(
+        np.ones((source.latitude.size, source.longitude.size)),
+        dims=["latitude", "longitude"],
+        coords={"latitude": source.latitude, "longitude": source.longitude},
+    ).chunk({"latitude": -1, "longitude": -1})
+    source["b"] = source.a.copy().chunk({"latitude": 45, "longitude": 90})
+
+    dx_target = 1
+    target = xarray_regrid.Grid(
+        north=90,
+        east=360,
+        south=-90,
+        west=0,
+        resolution_lat=dx_target,
+        resolution_lon=dx_target,
+    ).create_regridding_dataset()
+
+    # dataset
+    formatted = format_for_regrid(source, target)
+    assert formatted.a.chunks == ((92,), (182,))
+    assert formatted.b.chunks == ((1, 45, 45, 1), (1, 90, 90, 1))
+
+    # dataarray
+    formatted = format_for_regrid(source.a, target)
+    assert formatted.chunks == ((92,), (182,))
