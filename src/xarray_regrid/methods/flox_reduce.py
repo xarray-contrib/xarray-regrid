@@ -72,9 +72,13 @@ def statistic_reduce(
         msg = f"Invalid method. Please choose from '{valid_methods}'."
         raise ValueError(msg)
 
-    coords = utils.common_coords(data, target_ds, remove_coord=time_dim)
-    target_coords = xr.Dataset(target_ds.coords)  # coords target coords for reindexing
-    sorted_target_coords = target_coords.sortby(coords)
+    # Make sure the regridding coordinates are sorted
+    coord_names = utils.common_coords(data, target_ds, remove_coord=time_dim)
+    sorted_target_coords = xr.Dataset(coords=target_ds.coords)
+    for coord_name in coord_names:
+        sorted_target_coords = utils.ensure_monotonic(sorted_target_coords, coord_name)
+        data = utils.ensure_monotonic(data, coord_name)
+    coords = {name: sorted_target_coords[name] for name in coord_names}
 
     bounds = tuple(
         construct_intervals(sorted_target_coords[coord].to_numpy()) for coord in coords
@@ -92,7 +96,7 @@ def statistic_reduce(
     )
 
     result = restore_properties(result, data, target_ds, coords, fill_value)
-    result = result.reindex_like(target_coords, copy=False)
+    result = result.reindex_like(sorted_target_coords, copy=False)
     return result
 
 
