@@ -4,12 +4,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
-## Unreleased
+## 0.4.1 (2025-04-08)
 
 Fixed:
  - Attributes are now properly preserved when updating coordinates during pre-formatting for regridding ([#54](https://github.com/xarray-contrib/xarray-regrid/pull/54)).
  - Handle datasets with inconsistent chunksizes during pre-formatting ([#57](https://github.com/xarray-contrib/xarray-regrid/pull/57)).
-
+ - `regrid.stats` should properly regrid input data even when coordinates are not monotonic ([#58](https://github.com/xarray-contrib/xarray-regrid/pull/58)).
 
 ## 0.4.0 (2024-09-26)
 
