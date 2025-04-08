@@ -233,3 +233,28 @@ def test_var(dummy_lc_data, dummy_target_grid):
         dummy_lc_data["lc"].astype(float).regrid.stat(dummy_target_grid, "var"),
         make_expected_ds(expected_data)["lc"],
     )
+
+
+def test_unsorted_coords(dummy_lc_data, dummy_target_grid):
+    """Should pass if the input data has coords that are not ordered."""
+    expected_data = np.array(
+        [
+            [0.0, 0.0, 1.0, 0.0, 0.0, 0.0],
+            [1.0, 0.75, 0.75, 0.0, 0.0, 0.0],
+            [0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+            [0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+            [2.25, 0.0, 0.0, 0.0, 0.0, 0.25],
+            [0.0, 1.6875, 2.25, 0.0, 0.25, 0.0],
+        ]
+    )
+    lc_data = dummy_lc_data.copy()
+
+    lc_data["scramble_order"] = lc_data["latitude"] * 0 + np.array(
+        [1, 3, 7, 0, 2, 8, 9, -1, 5, 11, 12]
+    )
+    lc_data = lc_data.sortby("scramble_order")
+
+    xr.testing.assert_equal(
+        lc_data["lc"].astype(float).regrid.stat(dummy_target_grid, "var"),
+        make_expected_ds(expected_data)["lc"],
+    )
