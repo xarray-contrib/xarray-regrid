@@ -249,8 +249,8 @@ def test_unsorted_coords(dummy_lc_data, dummy_target_grid):
     )
     lc_data = dummy_lc_data.copy()
 
-    lc_data["scramble_order"] = (
-        lc_data["latitude"]*0 + np.array([1, 3, 7, 0, 2, 8, 9, -1, 5, 11, 12])
+    lc_data["scramble_order"] = lc_data["latitude"] * 0 + np.array(
+        [1, 3, 7, 0, 2, 8, 9, -1, 5, 11, 12]
     )
     lc_data = lc_data.sortby("scramble_order")
 

@@ -84,7 +84,7 @@ def statistic_reduce(
         construct_intervals(sorted_target_coords[coord].to_numpy()) for coord in coords
     )
 
-    data = reduce_data_to_new_domain(data, sorted_target_coords, coords)
+    data = reduce_data_to_new_domain(data, sorted_target_coords, coord_names)
 
     result: xr.Dataset = flox.xarray.xarray_reduce(
         data,
@@ -95,7 +95,7 @@ def statistic_reduce(
         fill_value=fill_value,
     )
 
-    result = restore_properties(result, data, target_ds, coords, fill_value)
+    result = restore_properties(result, data, target_ds, coord_names, fill_value)
     result = result.reindex_like(sorted_target_coords, copy=False)
     return result
 
