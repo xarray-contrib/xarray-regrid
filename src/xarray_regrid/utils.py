@@ -311,7 +311,7 @@ def format_lat(
     # TODO: with cos(90) = 0 weighting, these weights might be 0?
 
     polar_lat = 90
-    dy = obj.coords[lat_coord].diff(lat_coord).max().values.item()
+    dy: Any = obj.coords[lat_coord].diff(lat_coord).max().values.item()
 
     # Only pad if global but don't have edge values directly at poles
     # NOTE: could use xr.pad here instead of xr.concat, but none of the
@@ -369,8 +369,8 @@ def format_lon(
     # Only pad if domain is global in lon
     source_lon = obj.coords[lon_coord]
     target_lon = target.coords[lon_coord]
-    dx_s = source_lon.diff(lon_coord).max().values.item()
-    dx_t = target_lon.diff(lon_coord).max().values.item()
+    dx_s: Any = source_lon.diff(lon_coord).max().values.item()
+    dx_t: Any = target_lon.diff(lon_coord).max().values.item()
     is_global_lon = source_lon.max().values - source_lon.min().values >= 360 - dx_s
 
     if is_global_lon:

@@ -15,6 +15,7 @@ All regridding methods can operate lazily on [Dask arrays](https://docs.xarray.d
 Note that "Most common value" is designed to regrid categorical data to a coarse resolution. For regridding categorical data to a finer resolution, please use "nearest-neighbor" regridder.
 
 [![PyPI](https://img.shields.io/pypi/v/xarray-regrid.svg?style=flat)](https://pypi.python.org/pypi/xarray-regrid/)
+[![conda-forge](https://anaconda.org/conda-forge/xarray-regrid/badges/version.svg)](https://anaconda.org/conda-forge/xarray-regrid)
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.10203304.svg)](https://doi.org/10.5281/zenodo.10203304)
 [![Docs](https://readthedocs.org/projects/xarray-regrid/badge/?version=latest&style=flat)](https://xarray-regrid.readthedocs.org/)
 
@@ -29,6 +30,8 @@ For a minimal install:
 pip install xarray-regrid
 ```
 
+*Note: xarray-regrid is also [available on conda-forge](https://anaconda.org/conda-forge/xarray-regrid).*
+
 To improve performance in certain cases:
 ```console
 pip install xarray-regrid[accel]
@@ -39,7 +42,7 @@ which includes optional extras such as:
  - `sparse`: for performing conservative regridding using sparse weight matrices
  - `opt-einsum`: optimized einsum routines used in conservative regridding
 
- Benchmarking varies across different hardware specifications, but the inclusion of these extras can often provide significant speedups.
+Benchmarking varies across different hardware specifications, but the inclusion of these extras can often provide significant speedups.
 
 ## Usage
 The xarray-regrid routines are accessed using the "regrid" accessor on an xarray Dataset:
