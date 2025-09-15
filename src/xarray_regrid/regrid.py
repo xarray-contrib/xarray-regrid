@@ -292,7 +292,7 @@ def validate_input(
     time_dim: str | None,
 ) -> xr.Dataset:
     if time_dim is not None and time_dim in ds_target_grid.coords:
-        ds_target_grid = ds_target_grid.isel(time=0).reset_coords()
+        ds_target_grid = ds_target_grid.isel({time_dim: 0}).reset_coords()
 
     if len(set(data.dims).intersection(set(ds_target_grid.dims))) == 0:
         msg = (
