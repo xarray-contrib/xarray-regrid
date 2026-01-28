@@ -4,14 +4,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/).
 
-## 0.4.2 (2025-09-15)
+## 0.4.2 (2026-01-28)
 
 New contributors:
  - [@tdickinson29](https://github.com/tdickinson29)
 
 Fixed:
  - When validating input with a source dataset, use the passed `time_dim` argument ([#62](https://github.com/xarray-contrib/xarray-regrid/pull/62)).
-
+ - Fixed issue with lon values being immutable, thanks @shenyulu ([#65](https://github.com/xarray-contrib/xarray-regrid/issues/65), [#66](https://github.com/xarray-contrib/xarray-regrid/pull/66)).
+  
 ## 0.4.1 (2025-04-08)
 
 Fixed:
