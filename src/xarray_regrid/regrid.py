@@ -27,13 +27,13 @@ class Regridder:
 
     def linear(
         self,
-        ds_target_grid: xr.Dataset,
+        ds_target_grid: xr.DataArray | xr.Dataset,
         time_dim: str | None = "time",
     ) -> xr.DataArray | xr.Dataset:
         """Regrid to the coords of the target dataset with linear interpolation.
 
         Args:
-            ds_target_grid: Dataset containing the target coordinates.
+            ds_target_grid: Dataset or DataArray containing the target coordinates.
             time_dim: Name of the time dimension. Defaults to "time". Use `None` to
                 force regridding over the time dimension.
 
@@ -46,13 +46,13 @@ class Regridder:
 
     def nearest(
         self,
-        ds_target_grid: xr.Dataset,
+        ds_target_grid: xr.DataArray | xr.Dataset,
         time_dim: str | None = "time",
     ) -> xr.DataArray | xr.Dataset:
         """Regrid to the coords of the target with nearest-neighbor interpolation.
 
         Args:
-            ds_target_grid: Dataset containing the target coordinates.
+            ds_target_grid: Dataset or DataArray containing the target coordinates.
             time_dim: Name of the time dimension. Defaults to "time". Use `None` to
                 force regridding over the time dimension.
 
@@ -65,13 +65,13 @@ class Regridder:
 
     def cubic(
         self,
-        ds_target_grid: xr.Dataset,
+        ds_target_grid: xr.DataArray | xr.Dataset,
         time_dim: str | None = "time",
     ) -> xr.DataArray | xr.Dataset:
         """Regrid to the coords of the target dataset with cubic interpolation.
 
         Args:
-            ds_target_grid: Dataset containing the target coordinates.
+            ds_target_grid: Dataset or DataArray containing the target coordinates.
             time_dim: Name of the time dimension. Defaults to "time". Use `None` to
                 force regridding over the time dimension.
 
@@ -84,7 +84,7 @@ class Regridder:
 
     def conservative(
         self,
-        ds_target_grid: xr.Dataset,
+        ds_target_grid: xr.DataArray | xr.Dataset,
         latitude_coord: str | None = None,
         time_dim: str | None = "time",
         skipna: bool = True,
@@ -94,7 +94,7 @@ class Regridder:
         """Regrid to the coords of the target dataset with a conservative scheme.
 
         Args:
-            ds_target_grid: Dataset containing the target coordinates.
+            ds_target_grid: Dataset or DataArray containing the target coordinates.
             latitude_coord: Name of the latitude coord, to be used for applying the
                 spherical correction. By default, attempt to infer a latitude coordinate
                 as either "latitude" or "lat".
@@ -132,7 +132,7 @@ class Regridder:
 
     def most_common(
         self,
-        ds_target_grid: xr.Dataset,
+        ds_target_grid: xr.DataArray | xr.Dataset,
         values: np.ndarray,
         time_dim: str | None = "time",
         fill_value: None | Any = None,
@@ -147,7 +147,7 @@ class Regridder:
         either of the two.
 
         Args:
-            ds_target_grid: Target grid dataset
+            ds_target_grid: Dataset or DataArray containing the target coordinates.
             values: Numpy array containing all labels expected to be in the
                 input data. For example, `np.array([0, 2, 4])`, if the data only
                 contains the values 0, 2 and 4.
@@ -184,7 +184,7 @@ class Regridder:
 
     def least_common(
         self,
-        ds_target_grid: xr.Dataset,
+        ds_target_grid: xr.DataArray | xr.Dataset,
         values: np.ndarray,
         time_dim: str | None = "time",
         fill_value: None | Any = None,
@@ -199,7 +199,7 @@ class Regridder:
         either of the two.
 
         Args:
-            ds_target_grid: Target grid dataset
+            ds_target_grid: Dataset or DataArray containing the target coordinates.
             values: Numpy array containing all labels expected to be in the
                 input data. For example, `np.array([0, 2, 4])`, if the data only
                 contains the values 0, 2 and 4.
@@ -236,7 +236,7 @@ class Regridder:
 
     def stat(
         self,
-        ds_target_grid: xr.Dataset,
+        ds_target_grid: xr.DataArray | xr.Dataset,
         method: str,
         time_dim: str | None = "time",
         skipna: bool = False,
@@ -249,7 +249,7 @@ class Regridder:
         https://flox.readthedocs.io/en/latest/aggregations.html
 
         Args:
-            ds_target_grid: Target grid dataset
+            ds_target_grid: Dataset or DataArray containing the target coordinates.
             method: One of the following reduction methods: "sum", "mean", "var", "std",
                 "median", "min", or "max".
             time_dim: Name of the time dimension. Defaults to "time". Use `None` to
@@ -273,7 +273,7 @@ class Regridder:
 @overload
 def validate_input(
     data: xr.Dataset,
-    ds_target_grid: xr.Dataset,
+    ds_target_grid: xr.DataArray | xr.Dataset,
     time_dim: str | None,
 ) -> xr.Dataset: ...
 
@@ -281,35 +281,41 @@ def validate_input(
 @overload
 def validate_input(
     data: xr.DataArray,
-    ds_target_grid: xr.Dataset,
+    ds_target_grid: xr.DataArray | xr.Dataset,
     time_dim: str | None,
 ) -> xr.Dataset: ...
 
 
 def validate_input(
     data: xr.DataArray | xr.Dataset,
-    ds_target_grid: xr.Dataset,
+    ds_target_grid: xr.DataArray | xr.Dataset,
     time_dim: str | None,
 ) -> xr.Dataset:
-    if time_dim is not None and time_dim in ds_target_grid.coords:
-        ds_target_grid = ds_target_grid.isel({time_dim: 0}).reset_coords()
+    target_grid: xr.Dataset = (
+        ds_target_grid.coords.to_dataset()
+        if isinstance(ds_target_grid, xr.DataArray)
+        else ds_target_grid
+    )
 
-    if len(set(data.dims).intersection(set(ds_target_grid.dims))) == 0:
+    if time_dim is not None and time_dim in target_grid.coords:
+        target_grid = target_grid.isel({time_dim: 0}).reset_coords()
+
+    if len(set(data.dims).intersection(set(target_grid.dims))) == 0:
         msg = (
             "None of the target dims are in the data:\n"
             " regridding is not possible.\n"
-            f"Target dims: {list(ds_target_grid.dims)}\n"
+            f"Target dims: {list(target_grid.dims)}\n"
             f"Source dims: {list(data.dims)}"
         )
         raise ValueError(msg)
 
-    if len(set(data.coords).intersection(set(ds_target_grid.coords))) == 0:
+    if len(set(data.coords).intersection(set(target_grid.coords))) == 0:
         msg = (
             "None of the target coords are in the data:\n"
             " regridding is not possible.\n"
-            f"Target coords: {ds_target_grid.coords}\n"
+            f"Target coords: {target_grid.coords}\n"
             f"Dataset coords: {data.coords}"
         )
         raise ValueError(msg)
 
-    return ds_target_grid
+    return target_grid
