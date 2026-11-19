@@ -7,7 +7,7 @@ name = "xarray-regrid"
 dynamic = ["version"]
 description = 'Regridding tools using xarray and flox.'
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.12"
 license = "Apache-2.0"
 keywords = []
 authors = [
@@ -16,8 +16,10 @@ authors = [
 classifiers = [
   "Development Status :: 4 - Beta",
   "Programming Language :: Python",
-  "Programming Language :: Python :: 3.10",
-  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
+  "Programming Language :: Python :: 3.15",
   "Programming Language :: Python :: Implementation :: CPython",
   "Programming Language :: Python :: Implementation :: PyPy",
 ]
@@ -95,7 +97,7 @@ features = ["docs"]
 build = ["(cd docs && make html)"]
 
 [tool.ruff]
-target-version = "py310"
+target-version = "py312"
 line-length = 88
 exclude = [
   "docs",
@@ -134,7 +136,7 @@ ignore = [
   # Ignore checks for possible passwords
   "S105", "S106", "S107",
   # Ignore complexity
-  "C901", "PLR0911", "PLR0912", "PLR0913", "PLR0915",
+  "C901", "PLR0911", "PLR0912", "PLR0913", "PLR0915", "PLR0917",
   # Ignore magic values (false positives)
   "PLR2004",
   # Causes conflicts with formatter
@@ -175,7 +177,7 @@ exclude_lines = [
 ]
 
 [tool.mypy]
-python_version = "3.10"
+python_version = "3.12"
 plugins = "numpy.typing.mypy_plugin"
 disallow_untyped_defs = true
 disallow_any_unimported = true
