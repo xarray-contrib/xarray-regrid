@@ -30,6 +30,8 @@ def test_dataarray_target_matches_dataset(
     )
     if as_dataset:
         source = source.to_dataset()
+    # The same grid, built once as a Dataset and once as a DataArray.
+    grid = xr.Dataset(coords={"y": [0.5, 2.5, 4.5], "x": [0.5, 2.5, 4.5]})
     target = xr.DataArray(
         np.full((3, 3), np.nan),
         dims=("y", "x"),
@@ -37,6 +39,7 @@ def test_dataarray_target_matches_dataset(
         name=target_name,
     )
     if target_has_time:
+        grid = grid.assign_coords(time=[10, 20])
         target = target.expand_dims(time=[10, 20])
     if chunked:
         source = source.chunk({"time": 1})
@@ -48,10 +51,58 @@ def test_dataarray_target_matches_dataset(
     elif method == "stat":
         kwargs["method"] = "mean"
     regrid = getattr(source.regrid, method)
-    expected = regrid(target.coords.to_dataset(), **kwargs)
+    expected = regrid(grid, **kwargs)
     actual = regrid(target, **kwargs)
     xr.testing.assert_identical(actual.compute(), expected.compute())
     xr.testing.assert_identical(target, original)
+
+
+@pytest.mark.parametrize("method", ["linear", "conservative"])
+def test_unnamed_dataarray_target_with_time_values(method):
+    # The source only varies along x (0, 1, 2, 0, 1, 2), so the values on the
+    # target grid can be worked out by hand.
+    source = xr.DataArray(
+        np.tile(np.arange(6.0) % 3, (2, 6, 1)),
+        dims=("time", "y", "x"),
+        coords={"time": [0, 1], "y": np.arange(6), "x": np.arange(6)},
+    )
+    target = xr.DataArray(
+        np.full((3, 3), np.nan),
+        dims=("y", "x"),
+        coords={"y": [0.5, 2.5, 4.5], "x": [0.5, 2.5, 4.5]},
+    ).expand_dims(time=[10, 20])
+    expected = xr.DataArray(
+        np.tile([0.5, 1.0, 1.5], (2, 3, 1)),
+        dims=("time", "y", "x"),
+        coords={"time": [0, 1], "y": [0.5, 2.5, 4.5], "x": [0.5, 2.5, 4.5]},
+    )
+    xr.testing.assert_allclose(getattr(source.regrid, method)(target), expected)
+
+
+def test_dataarray_target_without_coords_reports_missing_coords():
+    source = xr.DataArray(
+        np.ones((6, 6)),
+        dims=("y", "x"),
+        coords={"y": np.arange(6), "x": np.arange(6)},
+    )
+    target = xr.DataArray(np.ones((3, 3)), dims=("y", "x"))
+    with pytest.raises(ValueError, match="None of the target coords are in the data"):
+        source.regrid.linear(target)
+
+
+def test_dataarray_target_dim_without_coord_matches_dataset():
+    source = xr.DataArray(
+        np.arange(36.0).reshape(6, 6),
+        dims=("y", "x"),
+        coords={"y": np.arange(6), "x": np.arange(6)},
+    )
+    target = xr.DataArray(
+        np.ones((3, 3, 2)),
+        dims=("y", "x", "bnds"),
+        coords={"y": [0.5, 2.5, 4.5], "x": [0.5, 2.5, 4.5]},
+    )
+    expected = source.regrid.linear(target.to_dataset(name="target"))
+    xr.testing.assert_identical(source.regrid.linear(target), expected)
 
 
 def test_dataarray_target_values_are_not_computed():

@@ -291,6 +291,9 @@ def validate_input(
     ds_target_grid: xr.DataArray | xr.Dataset,
     time_dim: str | None,
 ) -> xr.Dataset:
+    # Read the dims from the target itself: .coords.to_dataset() drops the dims
+    # of a DataArray that have no coordinate.
+    target_dims = list(ds_target_grid.dims)
     target_grid: xr.Dataset = (
         ds_target_grid.coords.to_dataset()
         if isinstance(ds_target_grid, xr.DataArray)
@@ -299,12 +302,13 @@ def validate_input(
 
     if time_dim is not None and time_dim in target_grid.coords:
         target_grid = target_grid.isel({time_dim: 0}).reset_coords()
+        target_dims = [dim for dim in target_dims if dim != time_dim]
 
-    if len(set(data.dims).intersection(set(target_grid.dims))) == 0:
+    if len(set(data.dims).intersection(set(target_dims))) == 0:
         msg = (
             "None of the target dims are in the data:\n"
             " regridding is not possible.\n"
-            f"Target dims: {list(target_grid.dims)}\n"
+            f"Target dims: {target_dims}\n"
             f"Source dims: {list(data.dims)}"
         )
         raise ValueError(msg)
