@@ -185,6 +185,12 @@ def test_conservative_nan_aggregation_over_dims():
     np.testing.assert_allclose(result[0].mean().item(), data[0].mean().item())
 
 
+@pytest.mark.xfail(
+    xr.__version__ == "2026.9.0",
+    reason="Bug in xarray 2026.9.0: coarsen reductions reject `skipna`.",
+    raises=TypeError,
+    strict=True,
+)
 @pytest.mark.parametrize("nan_threshold", [0, 1])
 def test_conservative_nan_thresholds_against_coarsen(nan_threshold):
     """Compare nan_threshold regridding to behavior of xarray coarsen, where coarsen
