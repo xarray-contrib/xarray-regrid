@@ -135,7 +135,7 @@ class Regridder:
         ds_target_grid: xr.Dataset,
         values: np.ndarray,
         time_dim: str | None = "time",
-        fill_value: None | Any = None,
+        fill_value: Any | None = None,
     ) -> xr.DataArray:
         """Regrid by taking the most common value within the new grid cells.
 
@@ -165,8 +165,8 @@ class Regridder:
         if isinstance(self._obj, xr.Dataset):
             msg = (
                 "The 'most common value' regridder is not implemented for\n",
-                "xarray.Dataset, as it requires specifying the expected labels.\n"
-                "Please select only a single variable (as DataArray),\n"
+                "xarray.Dataset, as it requires specifying the expected labels.\n",
+                "Please select only a single variable (as DataArray),\n",
                 " and regrid it separately.",
             )
             raise ValueError(msg)
@@ -187,7 +187,7 @@ class Regridder:
         ds_target_grid: xr.Dataset,
         values: np.ndarray,
         time_dim: str | None = "time",
-        fill_value: None | Any = None,
+        fill_value: Any | None = None,
     ) -> xr.DataArray:
         """Regrid by taking the least common value within the new grid cells.
 
@@ -217,8 +217,8 @@ class Regridder:
         if isinstance(self._obj, xr.Dataset):
             msg = (
                 "The 'least common value' regridder is not implemented for\n",
-                "xarray.Dataset, as it requires specifying the expected labels.\n"
-                "Please select only a single variable (as DataArray),\n"
+                "xarray.Dataset, as it requires specifying the expected labels.\n",
+                "Please select only a single variable (as DataArray),\n",
                 " and regrid it separately.",
             )
             raise ValueError(msg)
@@ -240,7 +240,7 @@ class Regridder:
         method: str,
         time_dim: str | None = "time",
         skipna: bool = False,
-        fill_value: None | Any = None,
+        fill_value: Any | None = None,
     ) -> xr.DataArray | xr.Dataset:
         """Upsampling of data using statistical methods (e.g. the mean or variance).
 

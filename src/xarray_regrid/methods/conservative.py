@@ -257,7 +257,7 @@ def lat_weight(latitude: np.ndarray, latitude_res: float) -> np.ndarray:
     dlat: float = np.radians(latitude_res)
     lat = np.radians(latitude)
     h = np.sin(lat + dlat / 2) - np.sin(lat - dlat / 2)
-    return h * dlat / (np.pi * 4)  # type: ignore
+    return h * dlat / (np.pi * 4)
 
 
 def format_weights(

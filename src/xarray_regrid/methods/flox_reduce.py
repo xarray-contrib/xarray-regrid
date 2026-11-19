@@ -22,7 +22,7 @@ def statistic_reduce(
     time_dim: str | None,
     method: str,
     skipna: bool = False,
-    fill_value: None | Any = None,
+    fill_value: Any | None = None,
 ) -> xr.DataArray: ...
 
 
@@ -33,7 +33,7 @@ def statistic_reduce(
     time_dim: str | None,
     method: str,
     skipna: bool = False,
-    fill_value: None | Any = None,
+    fill_value: Any | None = None,
 ) -> xr.Dataset: ...
 
 
@@ -43,7 +43,7 @@ def statistic_reduce(
     time_dim: str | None,
     method: str,
     skipna: bool = False,
-    fill_value: None | Any = None,
+    fill_value: Any | None = None,
 ) -> xr.DataArray | xr.Dataset:
     """Upsampling of data using statistical methods (e.g. the mean or variance).
 
@@ -124,7 +124,7 @@ def compute_mode(
     target_ds: xr.Dataset,
     values: np.ndarray,
     time_dim: str | None,
-    fill_value: None | Any = None,
+    fill_value: Any | None = None,
     anti_mode: bool = False,
 ) -> xr.DataArray:
     """Upsample the input data using a "most common label" (mode) approach.
