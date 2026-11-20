@@ -180,7 +180,12 @@ def compute_mode(
         expected_groups=(pd.Index(values.astype(data)), *bounds),
         fill_value=-1,
     )
-    result = result.idxmax(array_name) if not anti_mode else result.idxmin(array_name)
+    if anti_mode:
+        # Labels absent from a cell have the fill count (-1): exclude them.
+        absent = np.iinfo(result.dtype).max
+        result = result.where(result > 0, absent).idxmin(array_name)
+    else:
+        result = result.idxmax(array_name)
 
     result = restore_properties(result, data, target_ds, coords, fill_value)
     result = result.reindex_like(target_coords, copy=False)
